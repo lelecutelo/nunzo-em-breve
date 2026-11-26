@@ -10,7 +10,7 @@
   <meta property="og:description" content="nunzo — Em breve.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://nunzo.com.br">
-  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link id="dyn-favicon" rel="icon" type="image/svg+xml" href="./favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500&display=swap">
@@ -18,6 +18,7 @@
     :root {
       --ink: #14181B;
       --dot: #2BD46B;
+      --ondot: #0B1A10;
       --soft: #A3ABAE;
       --muted: #6C767C;
       --paper: #FFFFFF;
@@ -48,6 +49,10 @@
       padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
     }
 
+    body.settled {
+      cursor: crosshair;
+    }
+
     #map {
       position: fixed;
       inset: 0;
@@ -61,6 +66,7 @@
     footer {
       position: relative;
       z-index: 1;
+      pointer-events: none;
     }
 
     main {
@@ -93,7 +99,24 @@
       align-items: baseline;
       color: var(--paper);
       user-select: none;
+      pointer-events: auto;
+    }
+
+    .word-trigger {
+      display: inline-flex;
+      align-items: baseline;
       cursor: pointer;
+    }
+
+    .ring-trigger {
+      display: inline-flex;
+      align-items: baseline;
+      cursor: pointer;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body.settled .ring-trigger:hover {
+      transform: scale(1.03);
     }
 
     .ch-mask {
@@ -170,10 +193,35 @@
       transition: opacity 0.6s ease 0.1s, transform 0.68s cubic-bezier(0.16, 1, 0.3, 1) 0.1s;
     }
 
+    .hint {
+      position: fixed;
+      bottom: 62px;
+      left: 50%;
+      transform: translateX(-50%) translateY(4px);
+      z-index: 1;
+      pointer-events: none;
+      color: rgba(163, 171, 174, 0.45);
+      font-size: 11.5px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      opacity: 0;
+      transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    body.hint-on .hint {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    body.interacted .hint {
+      opacity: 0 !important;
+    }
+
     footer {
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-wrap: wrap;
       gap: 10px;
       color: var(--muted);
       font-size: 13px;
@@ -188,9 +236,28 @@
       opacity: 0.35;
     }
 
-    #clock {
+    #clock,
+    #metrics {
       font-variant-numeric: tabular-nums;
-      opacity: 0.78;
+      opacity: 0.82;
+    }
+
+    #metrics {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      color: var(--soft);
+    }
+
+    body.interacted #metrics {
+      display: inline-flex;
+    }
+
+    .m-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--dot);
     }
 
     body.settled .badge,
@@ -199,10 +266,153 @@
       transform: translateY(0);
     }
 
+    /* Easter egg: Acesso antecipado ao clicar no "O" */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(11, 14, 16, 0.68);
+      backdrop-filter: blur(10px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    .modal-backdrop[data-open="true"] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      width: min(380px, 100%);
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: #181D21;
+      padding: 24px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+      transform: translateY(10px) scale(0.98);
+      transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+      text-align: left;
+      cursor: default;
+    }
+
+    .modal-backdrop[data-open="true"] .modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 6px;
+    }
+
+    .modal-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--paper);
+    }
+
+    .modal-title i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--dot);
+      display: inline-block;
+    }
+
+    .modal-close {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: transparent;
+      color: var(--soft);
+      font-size: 16px;
+      line-height: 1;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
+
+    .modal-close:hover {
+      color: var(--paper);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .modal-sub {
+      margin: 0 0 16px;
+      font-size: 13.5px;
+      color: var(--soft);
+      line-height: 1.45;
+    }
+
+    .modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .modal-input {
+      width: 100%;
+      height: 42px;
+      padding: 0 14px;
+      border-radius: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: #121619;
+      color: var(--paper);
+      font: 400 14px var(--font);
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .modal-input:focus {
+      border-color: var(--dot);
+    }
+
+    .modal-input::placeholder {
+      color: var(--muted);
+    }
+
+    .modal-submit {
+      height: 42px;
+      border-radius: 10px;
+      border: 0;
+      background: var(--dot);
+      color: var(--ondot);
+      font: 500 14px var(--font);
+      cursor: pointer;
+      transition: filter 0.2s ease;
+    }
+
+    .modal-submit:hover {
+      filter: brightness(1.06);
+    }
+
+    .modal-submit:disabled {
+      opacity: 0.65;
+      cursor: wait;
+    }
+
+    .modal-status {
+      margin: 10px 0 0;
+      font-size: 13px;
+      color: var(--dot);
+      min-height: 18px;
+    }
+
     body.resetting .ch,
     body.resetting .mk .ring-arc,
     body.resetting .badge,
-    body.resetting footer {
+    body.resetting footer,
+    body.resetting .hint {
       transition: none !important;
     }
 
@@ -228,7 +438,8 @@
       .badge,
       .ch,
       .mk .ring-arc,
-      footer {
+      footer,
+      .hint {
         transition: none !important;
       }
       .stack,
@@ -255,19 +466,44 @@
 
   <main>
     <div class="stack">
-      <h1 class="mk" data-mk aria-label="nunzo" title="Clique para rever a animação"></h1>
+      <h1 class="mk" data-mk aria-label="nunzo"></h1>
       <div class="badge">Em breve</div>
     </div>
   </main>
+
+  <div class="hint" aria-hidden="true">Clique no escuro</div>
 
   <footer>
     <span>nunzo.com.br</span>
     <span class="sep" aria-hidden="true">·</span>
     <span id="clock" aria-label="Horário atual"></span>
+    <span id="metrics" aria-live="polite">
+      <span class="sep" aria-hidden="true">·</span>
+      <span class="m-dot" aria-hidden="true"></span>
+      <span id="metrics-text"></span>
+    </span>
   </footer>
+
+  <div class="modal-backdrop" id="waitlist-modal" data-open="false" role="dialog" aria-modal="true" aria-labelledby="wl-title">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title" id="wl-title"><i></i><span>Acesso antecipado</span></div>
+        <button type="button" class="modal-close" id="wl-close" aria-label="Fechar">×</button>
+      </div>
+      <p class="modal-sub">Deixe seu contato para avisarmos quando abrirmos.</p>
+      <form class="modal-form" id="wl-form">
+        <input type="text" class="modal-input" id="wl-input" placeholder="E-mail ou WhatsApp" autocomplete="email" required>
+        <button type="submit" class="modal-submit" id="wl-submit">Entrar na lista</button>
+      </form>
+      <p class="modal-status" id="wl-status"></p>
+    </div>
+  </div>
 
   <script src="./map-data.js"></script>
   <script>
+    // Opcional: cole aqui uma URL do Formspree / Cloudflare Worker para receber os contatos da lista antecipada
+    const WAITLIST_ENDPOINT = "";
+
     const FONT = "Outfit", WGT = 500, SIZE = 200, BASE = 220;
     const mCv = document.createElement("canvas");
     mCv.width = 520;
@@ -346,8 +582,54 @@
         `</svg>`;
 
       const el = document.querySelector("[data-mk]");
-      el.innerHTML = letters + svg;
+      el.innerHTML =
+        `<span class="word-trigger" title="Clique para rever">${letters}</span>` +
+        `<span class="ring-trigger" title="Acesso antecipado">${svg}</span>`;
       return el;
+    }
+
+    // Aba do navegador viva (favicon do anel com a bolinha verde piscando)
+    const favLink = document.getElementById("dyn-favicon");
+    const favCv = document.createElement("canvas");
+    favCv.width = 64;
+    favCv.height = 64;
+    const favCtx = favCv.getContext("2d");
+    let favBright = true;
+    let favFrames = [];
+
+    function initFaviconFrames() {
+      favFrames = [true, false].map(bright => {
+        favCtx.clearRect(0, 0, 64, 64);
+        favCtx.fillStyle = "#15191C";
+        drawRoundedRect(favCtx, 0, 0, 64, 64, 15);
+        favCtx.fill();
+
+        favCtx.strokeStyle = "#FFFFFF";
+        favCtx.lineWidth = 6.2;
+        favCtx.lineCap = "round";
+        favCtx.beginPath();
+        favCtx.arc(32, 32, 16.2, 8 * Math.PI / 180, 262 * Math.PI / 180, false);
+        favCtx.stroke();
+
+        favCtx.fillStyle = bright ? "rgba(43, 212, 107, 1)" : "rgba(43, 212, 107, 0.28)";
+        favCtx.beginPath();
+        favCtx.arc(43.46, 20.54, 3.1, 0, Math.PI * 2);
+        favCtx.fill();
+        return favCv.toDataURL("image/png");
+      });
+    }
+
+    function tickFavicon() {
+      if (favFrames.length < 2) return;
+      favBright = !favBright;
+      favLink.href = favFrames[favBright ? 0 : 1];
+    }
+
+    if (!reducedMotion) {
+      initFaviconFrames();
+      setInterval(() => {
+        if (state.phase === "settled") tickFavicon();
+      }, 1100);
     }
 
     // Relógio ao vivo discreto no rodapé
@@ -367,14 +649,16 @@
     const staticCanvas = document.createElement("canvas");
     const sCtx = staticCanvas.getContext("2d");
 
-    const SPOT_R = 230;
+    const SPOT_R = 235;
     const spotCanvas = document.createElement("canvas");
     const spCtx = spotCanvas.getContext("2d");
 
     let W = 0, H = 0, DPR = 1;
     let screenVerts = [];
     let mainComp = new Set();
+    let mainList = [];
     let adj = [];
+    let avenueNodes = [];
     let majorSegs = [];
     let route = [];
     let routeTotalLen = 0;
@@ -387,7 +671,8 @@
       tx: -9999,
       ty: -9999,
       active: false,
-      strength: 0
+      strength: 0,
+      snapNode: -1
     };
 
     const CALL_TIMES = ["09:15", "14:40", "21:18", "02:35"];
@@ -395,14 +680,23 @@
     const state = {
       phase: "idle", // idle | mapFade | streetRun | leap | settled
       phaseStart: 0,
-      runStart: 0,
       targetX: 0,
       targetY: 0,
       targetR: 6,
       leapFrom: { x: 0, y: 0 },
       trail: [],
-      beacons: []
+      beacons: [],
+      dispatches: [],
+      resolvedCount: 0,
+      avgMs: 0
     };
+
+    const metricsText = document.getElementById("metrics-text");
+    function updateMetricsUI() {
+      if (state.resolvedCount === 0) return;
+      const secs = (state.avgMs / 1000).toFixed(1).replace(".", ",");
+      metricsText.textContent = `${state.resolvedCount} · ${secs} s · 100%`;
+    }
 
     function cubic(p0, p1, p2, p3, t) {
       const u = 1 - t;
@@ -433,10 +727,16 @@
     function initGraph() {
       const n = MAP.v.length;
       adj = Array.from({ length: n }, () => []);
+      const isAvenueVert = new Uint8Array(n);
+
       for (const [tier, ids] of MAP.r) {
         const weightFactor = tier >= 3 ? 0.68 : tier === 2 ? 0.78 : tier === 1 ? 0.95 : 1.25;
         for (let i = 0; i < ids.length - 1; i++) {
           const a = ids[i], b = ids[i + 1];
+          if (tier >= 2) {
+            isAvenueVert[a] = 1;
+            isAvenueVert[b] = 1;
+          }
           const dx = MAP.v[a][0] - MAP.v[b][0];
           const dy = MAP.v[a][1] - MAP.v[b][1];
           const len = Math.hypot(dx, dy);
@@ -462,7 +762,69 @@
         }
         if (comp.length > best.length) best = comp;
       }
+
+      mainList = best;
       mainComp = new Set(best);
+      avenueNodes = best.filter(idx => isAvenueVert[idx] && adj[idx].length >= 2);
+    }
+
+    function shortestPath(start, goal) {
+      const n = MAP.v.length;
+      const dist = new Float64Array(n).fill(Infinity);
+      const prev = new Int32Array(n).fill(-1);
+      const visited = new Uint8Array(n);
+      const heap = [[0, start]];
+      dist[start] = 0;
+
+      while (heap.length > 0) {
+        const top = heap[0];
+        const last = heap.pop();
+        if (heap.length > 0) {
+          heap[0] = last;
+          let idx = 0;
+          while (true) {
+            const l = idx * 2 + 1, r = idx * 2 + 2;
+            let sm = idx;
+            if (l < heap.length && heap[l][0] < heap[sm][0]) sm = l;
+            if (r < heap.length && heap[r][0] < heap[sm][0]) sm = r;
+            if (sm === idx) break;
+            [heap[idx], heap[sm]] = [heap[sm], heap[idx]];
+            idx = sm;
+          }
+        }
+
+        const u = top[1];
+        if (visited[u]) continue;
+        visited[u] = 1;
+        if (u === goal) break;
+
+        for (const e of adj[u]) {
+          const nd = dist[u] + e.cost;
+          if (nd < dist[e.to]) {
+            dist[e.to] = nd;
+            prev[e.to] = u;
+            heap.push([nd, e.to]);
+            let idx = heap.length - 1;
+            while (idx > 0) {
+              const par = (idx - 1) >> 1;
+              if (heap[par][0] <= heap[idx][0]) break;
+              [heap[par], heap[idx]] = [heap[idx], heap[par]];
+              idx = par;
+            }
+          }
+        }
+      }
+
+      const segs = [];
+      let cur = goal;
+      while (cur !== start && prev[cur] !== -1) {
+        const from = prev[cur];
+        const a = screenVerts[from], b = screenVerts[cur];
+        segs.push({ from, to: cur, len: Math.hypot(a[0] - b[0], a[1] - b[1]) });
+        cur = from;
+      }
+      segs.reverse();
+      return segs;
     }
 
     function prepareViewportMap() {
@@ -491,7 +853,6 @@
 
       screenVerts = MAP.v.map(([x, y]) => [ox + x * scale, oy + y * scale]);
 
-      // Pré-renderiza o mapa real em estilo Dark Maps
       sCtx.fillStyle = "#14181B";
       sCtx.fillRect(0, 0, W, H);
 
@@ -573,87 +934,28 @@
       buildRoute();
     }
 
+    function pickClosestNode(tx, ty, requireMargin) {
+      let best = -1;
+      let bestD = Infinity;
+      for (const idx of mainList) {
+        const p = screenVerts[idx];
+        if (requireMargin && (p[0] < 64 || p[0] > W - 64 || p[1] < 78 || p[1] > H - 72)) continue;
+        if (adj[idx].length < 2) continue;
+        const d = Math.hypot(p[0] - tx, p[1] - ty);
+        if (d < bestD) {
+          bestD = d;
+          best = idx;
+        }
+      }
+      return best >= 0 ? best : mainList[0];
+    }
+
     function buildRoute() {
-      function pickClosestNode(tx, ty) {
-        let best = -1;
-        let bestD = Infinity;
-        for (const idx of mainComp) {
-          const p = screenVerts[idx];
-          if (p[0] < 64 || p[0] > W - 64 || p[1] < 78 || p[1] > H - 72) continue;
-          if (adj[idx].length < 2) continue;
-          const d = Math.hypot(p[0] - tx, p[1] - ty);
-          if (d < bestD) {
-            bestD = d;
-            best = idx;
-          }
-        }
-        return best >= 0 ? best : [...mainComp][0];
-      }
-
-      const p0 = pickClosestNode(W * 0.17, H * 0.28);
-      const p1 = pickClosestNode(W * 0.23, H * 0.75);
-      const p2 = pickClosestNode(W * 0.76, H * 0.73);
-      const p3 = pickClosestNode(W * 0.80, H * 0.26);
+      const p0 = pickClosestNode(W * 0.17, H * 0.28, true);
+      const p1 = pickClosestNode(W * 0.23, H * 0.75, true);
+      const p2 = pickClosestNode(W * 0.76, H * 0.73, true);
+      const p3 = pickClosestNode(W * 0.80, H * 0.26, true);
       const waypoints = [p0, p1, p2, p3];
-
-      function shortestPath(start, goal) {
-        const n = MAP.v.length;
-        const dist = new Float64Array(n).fill(Infinity);
-        const prev = new Int32Array(n).fill(-1);
-        const visited = new Uint8Array(n);
-        const heap = [[0, start]];
-        dist[start] = 0;
-
-        while (heap.length > 0) {
-          const top = heap[0];
-          const last = heap.pop();
-          if (heap.length > 0) {
-            heap[0] = last;
-            let idx = 0;
-            while (true) {
-              const l = idx * 2 + 1, r = idx * 2 + 2;
-              let sm = idx;
-              if (l < heap.length && heap[l][0] < heap[sm][0]) sm = l;
-              if (r < heap.length && heap[r][0] < heap[sm][0]) sm = r;
-              if (sm === idx) break;
-              [heap[idx], heap[sm]] = [heap[sm], heap[idx]];
-              idx = sm;
-            }
-          }
-
-          const u = top[1];
-          if (visited[u]) continue;
-          visited[u] = 1;
-          if (u === goal) break;
-
-          for (const e of adj[u]) {
-            const nd = dist[u] + e.cost;
-            if (nd < dist[e.to]) {
-              dist[e.to] = nd;
-              prev[e.to] = u;
-              heap.push([nd, e.to]);
-              let idx = heap.length - 1;
-              while (idx > 0) {
-                const par = (idx - 1) >> 1;
-                if (heap[par][0] <= heap[idx][0]) break;
-                [heap[par], heap[idx]] = [heap[idx], heap[par]];
-                idx = par;
-              }
-            }
-          }
-        }
-
-        const segs = [];
-        let cur = goal;
-        while (cur !== start && prev[cur] !== -1) {
-          const from = prev[cur];
-          const a = screenVerts[from], b = screenVerts[cur];
-          segs.push({ from, to: cur, len: Math.hypot(a[0] - b[0], a[1] - b[1]) });
-          cur = from;
-        }
-        segs.reverse();
-        return segs;
-      }
 
       route = [];
       routeTotalLen = 0;
@@ -685,6 +987,66 @@
       state.leapFrom = { x: screenVerts[p3][0], y: screenVerts[p3][1] };
     }
 
+    function spawnUserDispatch(clickX, clickY) {
+      const targetNode = pickClosestNode(clickX, clickY, false);
+      const tx = screenVerts[targetNode][0];
+      const ty = screenVerts[targetNode][1];
+
+      // Escolhe um ponto de partida numa avenida a ~200-420px de distância
+      const pool = avenueNodes.length > 0 ? avenueNodes : mainList;
+      let originNode = -1;
+      let bestScore = Infinity;
+      const desired = Math.min(340, Math.max(190, Math.min(W, H) * 0.34));
+
+      for (let t = 0; t < 28; t++) {
+        const cand = pool[Math.floor(Math.random() * pool.length)];
+        if (cand === targetNode) continue;
+        const p = screenVerts[cand];
+        if (p[0] < 0 || p[0] > W || p[1] < 0 || p[1] > H) continue;
+        const d = Math.hypot(p[0] - tx, p[1] - ty);
+        if (d < 120) continue;
+        const score = Math.abs(d - desired);
+        if (score < bestScore) {
+          bestScore = score;
+          originNode = cand;
+        }
+      }
+      if (originNode < 0) originNode = pickClosestNode(tx + 220, ty - 160, false);
+
+      const segs = shortestPath(originNode, targetNode);
+      if (segs.length === 0) return;
+
+      let total = 0;
+      for (const s of segs) {
+        s.startDist = total;
+        total += s.len;
+        s.endDist = total;
+      }
+
+      const now = performance.now();
+      const dObj = new Date();
+      const timeLabel = `${String(dObj.getHours()).padStart(2, "0")}:${String(dObj.getMinutes()).padStart(2, "0")}`;
+      const duration = Math.max(320, Math.min(680, 240 + total * 0.72));
+
+      if (!document.body.classList.contains("interacted")) {
+        document.body.classList.add("interacted");
+      }
+
+      state.dispatches.push({
+        segs,
+        total,
+        start: now,
+        duration,
+        targetX: tx,
+        targetY: ty,
+        timeLabel,
+        barA: 22 + Math.floor(Math.random() * 10),
+        barB: 14 + Math.floor(Math.random() * 12),
+        answered: false,
+        answeredAt: 0
+      });
+    }
+
     function drawSoftGlow(x, y, radius, alpha) {
       const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
       grad.addColorStop(0, `rgba(43, 212, 107, ${(alpha * 0.54).toFixed(3)})`);
@@ -707,21 +1069,14 @@
       c.closePath();
     }
 
-    function drawCallCard(b, now, globalFade) {
-      const age = state.phase === "mapFade" ? (now - state.phaseStart) : 9999;
-      if (state.phase === "mapFade" && age < b.appearAt) return;
-
+    function drawCallCard(b, now, globalFade, enterProg) {
       const cardW = 76;
       const cardH = 34;
-      // Posiciona acima ou abaixo dependendo da metade da tela, mantendo sempre dentro das margens
       const placeBelow = b.y < 88;
       const cx = Math.min(Math.max(b.x, cardW * 0.5 + 14), W - cardW * 0.5 - 14);
       const x = cx - cardW * 0.5;
       const y = placeBelow ? b.y + 14 : b.y - cardH - 14;
 
-      const enterProg = state.phase === "mapFade"
-        ? clamp01((age - b.appearAt) / 260)
-        : 1;
       const alpha = enterProg * globalFade;
       if (alpha <= 0.02) return;
 
@@ -731,7 +1086,6 @@
       ctx.save();
       ctx.globalAlpha = alpha;
 
-      // Haste discreta ligando o cartão ao cruzamento
       ctx.strokeStyle = b.answered ? "rgba(43, 212, 107, 0.45)" : "rgba(255, 255, 255, 0.16)";
       ctx.lineWidth = 1;
       ctx.beginPath();
@@ -739,7 +1093,6 @@
       ctx.lineTo(b.x, placeBelow ? cy : cy + cardH);
       ctx.stroke();
 
-      // Cartão mínimo do chamado (sem texto revelando nicho: só horário + barras-esqueleto)
       drawRoundedRect(ctx, x, cy, cardW, cardH, 8);
       ctx.fillStyle = "rgba(21, 25, 28, 0.92)";
       ctx.fill();
@@ -747,19 +1100,16 @@
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Bolinha de status do chamado
       ctx.fillStyle = b.answered ? "#2BD46B" : "rgba(255, 255, 255, 0.78)";
       ctx.beginPath();
       ctx.arc(x + 11, cy + 11, 2.3, 0, Math.PI * 2);
       ctx.fill();
 
-      // Horário do chamado (ex.: 23:18)
       ctx.fillStyle = b.answered ? "rgba(255, 255, 255, 0.92)" : "rgba(195, 204, 207, 0.85)";
       ctx.font = '500 9.5px "Outfit", sans-serif';
       ctx.textBaseline = "middle";
       ctx.fillText(b.timeLabel, x + 17.5, cy + 11.2);
 
-      // Visto verde sutil quando respondido
       if (b.answered) {
         const chk = clamp01((now - b.answeredAt) / 220);
         ctx.strokeStyle = "#2BD46B";
@@ -775,7 +1125,6 @@
         ctx.stroke();
       }
 
-      // Duas barras-esqueleto simulando mensagem recebida sem entregar conteúdo
       ctx.fillStyle = b.answered ? "rgba(43, 212, 107, 0.25)" : "rgba(255, 255, 255, 0.2)";
       drawRoundedRect(ctx, x + 9, cy + 19.5, b.barA, 2.6, 1.3);
       ctx.fill();
@@ -784,7 +1133,6 @@
 
       ctx.restore();
 
-      // Marcador no cruzamento
       if (!b.answered) {
         const pulse = 0.55 + 0.45 * Math.sin(now * 0.008 + b.x);
         ctx.fillStyle = `rgba(255, 255, 255, ${(0.78 * alpha).toFixed(3)})`;
@@ -852,7 +1200,6 @@
         srcX0 - sx, srcY0 - sy, sw, sh
       );
 
-      // Realça sutilmente vias principais dentro do foco do mouse
       spCtx.lineCap = "round";
       for (const seg of majorSegs) {
         const dp = Math.hypot(seg.mx - pointer.x, seg.my - pointer.y);
@@ -867,10 +1214,9 @@
         }
       }
 
-      // Máscara radial suave que dissolve nas bordas
       spCtx.globalCompositeOperation = "destination-in";
       const mask = spCtx.createRadialGradient(SPOT_R, SPOT_R, 0, SPOT_R, SPOT_R, SPOT_R);
-      const peak = 0.65 * pointer.strength;
+      const peak = 0.68 * pointer.strength;
       mask.addColorStop(0, `rgba(0, 0, 0, ${peak.toFixed(3)})`);
       mask.addColorStop(0.45, `rgba(0, 0, 0, ${(peak * 0.45).toFixed(3)})`);
       mask.addColorStop(1, "rgba(0, 0, 0, 0)");
@@ -879,20 +1225,122 @@
       spCtx.globalCompositeOperation = "source-over";
 
       ctx.drawImage(spotCanvas, sx, sy, spSize, spSize);
+
+      // Sutil alvo na esquina mais próxima convidando ao clique
+      if (pointer.snapNode >= 0) {
+        const sp = screenVerts[pointer.snapNode];
+        const dSnap = Math.hypot(sp[0] - pointer.x, sp[1] - pointer.y);
+        if (dSnap < 90) {
+          const sa = (1 - dSnap / 90) * 0.55 * pointer.strength;
+          ctx.fillStyle = `rgba(43, 212, 107, ${sa.toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(sp[0], sp[1], 2.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.strokeStyle = `rgba(43, 212, 107, ${(sa * 0.55).toFixed(3)})`;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(sp[0], sp[1], 6.5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+    }
+
+    function renderDispatches(now) {
+      state.dispatches = state.dispatches.filter(d => {
+        const elapsed = now - d.start;
+        if (d.answered && now - d.answeredAt > 1450) return false;
+
+        const prog = clamp01(elapsed / d.duration);
+        const e = easeInOutCubic(prog);
+        const dist = e * d.total;
+
+        let globalFade = 1;
+        if (d.answered) {
+          const post = (now - d.answeredAt) / 1450;
+          if (post > 0.35) {
+            globalFade = 1 - (post - 0.35) / 0.65;
+          }
+        }
+
+        // Desenha trajeto percorrido pelas ruas reais
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = `rgba(43, 212, 107, ${(0.62 * globalFade).toFixed(3)})`;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+
+        let moved = false;
+        let headX = d.targetX, headY = d.targetY;
+        for (const seg of d.segs) {
+          if (dist <= seg.startDist) break;
+          const f = dist >= seg.endDist ? 1 : (dist - seg.startDist) / seg.len;
+          const a = screenVerts[seg.from], b = screenVerts[seg.to];
+          headX = a[0] + (b[0] - a[0]) * f;
+          headY = a[1] + (b[1] - a[1]) * f;
+          if (!moved) {
+            ctx.moveTo(a[0], a[1]);
+            moved = true;
+          }
+          ctx.lineTo(headX, headY);
+        }
+        ctx.stroke();
+
+        // Bolinha verde correndo até o chamado
+        if (!d.answered && moved) {
+          drawSoftGlow(headX, headY, 20, 0.95);
+          ctx.fillStyle = "#2BD46B";
+          ctx.beginPath();
+          ctx.arc(headX, headY, 3.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        if (!d.answered && prog >= 1) {
+          d.answered = true;
+          d.answeredAt = now;
+          state.resolvedCount += 1;
+          state.avgMs = state.resolvedCount === 1
+            ? d.duration
+            : state.avgMs * 0.72 + d.duration * 0.28;
+          updateMetricsUI();
+        }
+
+        const enterProg = clamp01(elapsed / 160);
+        drawCallCard(
+          {
+            x: d.targetX,
+            y: d.targetY,
+            timeLabel: d.timeLabel,
+            barA: d.barA,
+            barB: d.barB,
+            answered: d.answered,
+            answeredAt: d.answeredAt
+          },
+          now,
+          globalFade,
+          enterProg
+        );
+
+        return true;
+      });
     }
 
     function renderFrame(now) {
       ctx.clearRect(0, 0, W, H);
 
       if (pointer.active) {
-        pointer.x += (pointer.tx - pointer.x) * 0.18;
-        pointer.y += (pointer.ty - pointer.y) * 0.18;
-        pointer.strength = Math.min(1, pointer.strength + 0.08);
+        const dxp = pointer.tx - pointer.x;
+        const dyp = pointer.ty - pointer.y;
+        pointer.x += dxp * 0.2;
+        pointer.y += dyp * 0.2;
+        pointer.strength = Math.min(1, pointer.strength + 0.085);
+        if (state.phase === "settled" && (Math.abs(dxp) > 0.8 || Math.abs(dyp) > 0.8 || pointer.snapNode < 0)) {
+          pointer.snapNode = pickClosestNode(pointer.tx, pointer.ty, false);
+        }
       } else {
-        pointer.strength = Math.max(0, pointer.strength - 0.045);
+        pointer.strength = Math.max(0, pointer.strength - 0.04);
       }
 
-      // Opacidade do mapa inteiro: presente na abertura, depois some suavemente para foco total no Nunzo
       let mapAlpha = 1;
       if (state.phase === "mapFade") {
         mapAlpha = clamp01((now - state.phaseStart) / 420);
@@ -907,7 +1355,6 @@
         ctx.globalAlpha = 1;
       }
 
-      // Avança o ciclo 24h (21:30 -> 06:00 = 510 min) e a bolinha verde
       let traveler = null;
       let activeDist = -1;
       const runMs = 2350;
@@ -916,7 +1363,6 @@
       if (state.phase === "mapFade" && now - state.phaseStart >= 420) {
         state.phase = "streetRun";
         state.phaseStart = now;
-        state.runStart = now;
       }
 
       if (state.phase === "streetRun") {
@@ -965,7 +1411,6 @@
         }
       }
 
-      // Rota percorrida em verde durante a abertura
       if (state.phase === "streetRun" || state.phase === "leap" || state.phase === "settled") {
         const routeFade = state.phase === "settled"
           ? Math.max(0, 1 - (now - state.phaseStart) / 950)
@@ -999,23 +1444,27 @@
         }
       }
 
-      // Cartões dos 4 chamados no mapa
       const beaconFade = state.phase === "settled"
         ? Math.max(0, 1 - (now - state.phaseStart) / 850)
         : 1;
 
       if (beaconFade > 0.01) {
+        const ageOpen = state.phase === "mapFade" ? (now - state.phaseStart) : 9999;
         for (const b of state.beacons) {
-          drawCallCard(b, now, beaconFade);
+          if (state.phase === "mapFade" && ageOpen < b.appearAt) continue;
+          const enterProg = state.phase === "mapFade" ? clamp01((ageOpen - b.appearAt) / 260) : 1;
+          drawCallCard(b, now, beaconFade, enterProg);
         }
       }
 
-      // Depois que o Nunzo assenta, o fundo fica minimalista e só revela o mapa sob o mouse
       if (state.phase === "settled" && mapAlpha < 0.95) {
         drawPointerSpotlight();
       }
 
-      // Ponto verde principal viajando
+      if (state.dispatches.length > 0) {
+        renderDispatches(now);
+      }
+
       if (traveler) {
         if (state.trail.length > 2) {
           ctx.lineCap = "round";
@@ -1056,18 +1505,35 @@
       timers.push(setTimeout(() => document.body.classList.add("ring-in"), 30));
       timers.push(setTimeout(() => document.body.classList.add("word-in"), 280));
       timers.push(setTimeout(() => document.body.classList.add("settled"), 820));
+      timers.push(setTimeout(() => {
+        if (!document.body.classList.contains("interacted")) {
+          document.body.classList.add("hint-on");
+        }
+      }, 2600));
+    }
+
+    function bindWordmarkTriggers() {
+      document.querySelector(".word-trigger")?.addEventListener("click", e => {
+        e.stopPropagation();
+        if (state.phase === "settled") startExperience(true);
+      });
+      document.querySelector(".ring-trigger")?.addEventListener("click", e => {
+        e.stopPropagation();
+        if (state.phase === "settled") openModal();
+      });
     }
 
     function startExperience(isReplay) {
       clearTimers();
       document.body.classList.add("resetting");
-      document.body.classList.remove("dot-landed", "ring-in", "word-in", "settled");
+      document.body.classList.remove("dot-landed", "ring-in", "word-in", "settled", "hint-on");
       void document.body.offsetWidth;
       document.body.classList.remove("resetting");
 
       if (!isReplay) {
         const m = measure();
         buildWordmark(m);
+        bindWordmarkTriggers();
         initGraph();
       }
 
@@ -1085,12 +1551,70 @@
       state.phase = "mapFade";
       state.phaseStart = performance.now();
       state.trail = [];
+      state.dispatches = [];
 
       if (!rafId) {
         rafId = requestAnimationFrame(renderFrame);
       }
     }
 
+    // Modal de acesso antecipado (easter egg na bolinha do "O")
+    const modal = document.getElementById("waitlist-modal");
+    const wlClose = document.getElementById("wl-close");
+    const wlForm = document.getElementById("wl-form");
+    const wlInput = document.getElementById("wl-input");
+    const wlSubmit = document.getElementById("wl-submit");
+    const wlStatus = document.getElementById("wl-status");
+
+    function openModal() {
+      modal.setAttribute("data-open", "true");
+      wlStatus.textContent = "";
+      setTimeout(() => wlInput.focus(), 80);
+    }
+
+    function closeModal() {
+      modal.setAttribute("data-open", "false");
+    }
+
+    wlClose.addEventListener("click", closeModal);
+    modal.addEventListener("click", e => {
+      if (e.target === modal) closeModal();
+    });
+    window.addEventListener("keydown", e => {
+      if (e.key === "Escape" && modal.getAttribute("data-open") === "true") {
+        closeModal();
+      }
+    });
+
+    wlForm.addEventListener("submit", async e => {
+      e.preventDefault();
+      const val = wlInput.value.trim();
+      if (!val) return;
+      wlSubmit.disabled = true;
+
+      try {
+        if (WAITLIST_ENDPOINT) {
+          const res = await fetch(WAITLIST_ENDPOINT, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ contact: val, source: "nunzo-em-breve" })
+          });
+          if (!res.ok) throw new Error("request failed");
+        } else {
+          const list = JSON.parse(localStorage.getItem("nunzo_waitlist") || "[]");
+          list.push({ contact: val, at: new Date().toISOString() });
+          localStorage.setItem("nunzo_waitlist", JSON.stringify(list));
+        }
+        wlInput.value = "";
+        wlStatus.textContent = "Anotado. Você será um dos primeiros a saber.";
+      } catch {
+        wlStatus.textContent = "Não foi possível enviar agora. Tente novamente.";
+      } finally {
+        wlSubmit.disabled = false;
+      }
+    });
+
+    // Interação com o mapa escondido
     function updatePointer(e) {
       pointer.tx = e.clientX;
       pointer.ty = e.clientY;
@@ -1102,21 +1626,21 @@
     }
 
     window.addEventListener("pointermove", updatePointer, { passive: true });
-    window.addEventListener("pointerdown", updatePointer, { passive: true });
-
     window.addEventListener("pointerleave", () => {
       pointer.active = false;
+    });
+
+    window.addEventListener("click", e => {
+      if (state.phase !== "settled") return;
+      if (modal.getAttribute("data-open") === "true") return;
+      if (e.target.closest(".mk, footer, .modal")) return;
+      updatePointer(e);
+      spawnUserDispatch(e.clientX, e.clientY);
     });
 
     window.addEventListener("resize", () => {
       if (state.phase === "idle") return;
       prepareViewportMap();
-    });
-
-    document.querySelector("[data-mk]").addEventListener("click", () => {
-      if (state.phase === "settled") {
-        startExperience(true);
-      }
     });
 
     let booted = false;
