@@ -390,7 +390,7 @@
       strength: 0
     };
 
-    const CALL_TIMES = ["21:42", "23:18", "01:54", "04:26"];
+    const CALL_TIMES = ["09:15", "14:40", "21:18", "02:35"];
 
     const state = {
       phase: "idle", // idle | mapFade | streetRun | leap | settled
@@ -1126,7 +1126,7 @@
       startExperience(false);
     }
 
-    const safety = setTimeout(boot, 850);
+    const safety = setTimeout(boot, 450);
     document.fonts.load(`${WGT} ${SIZE}px "${FONT}"`, "nunzo")
       .catch(() => {})
       .then(() => document.fonts.ready)
