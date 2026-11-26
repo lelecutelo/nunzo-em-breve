@@ -45,6 +45,7 @@
       display: grid;
       grid-template-rows: 1fr auto;
       min-height: 100dvh;
+      overflow-x: hidden;
       padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
     }
 
@@ -59,6 +60,11 @@
       flex-direction: column;
       align-items: center;
       gap: 20px;
+      opacity: 0;
+    }
+
+    body.ready .stack {
+      opacity: 1;
     }
 
     .badge {
@@ -73,6 +79,9 @@
       font-size: 13px;
       font-weight: 500;
       letter-spacing: 0.04em;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     .led {
@@ -81,6 +90,9 @@
       border-radius: 50%;
       background: var(--dot);
       box-shadow: 0 0 0 3px rgba(43, 212, 107, 0.22);
+    }
+
+    body.settled .led {
       animation: led-pulse 3.2s ease-in-out infinite;
     }
 
@@ -98,12 +110,56 @@
       user-select: none;
     }
 
+    .ch-mask {
+      display: inline-block;
+      overflow: hidden;
+      vertical-align: baseline;
+      line-height: 1.06;
+      padding-bottom: 0.06em;
+      margin-bottom: -0.06em;
+      padding-inline: 0.015em;
+      margin-inline: -0.015em;
+    }
+
+    .ch {
+      display: inline-block;
+      transform: translateY(112%);
+      opacity: 0;
+      transition: transform 0.56s cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0ms),
+                  opacity 0.25s ease var(--d, 0ms);
+    }
+
+    body.word-in .ch {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
     .mk svg {
       display: inline-block;
       overflow: visible;
     }
 
-    .mk circle {
+    .mk .ring-arc {
+      stroke-dasharray: 101;
+      stroke-dashoffset: 101;
+      transition: stroke-dashoffset 0.58s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    body.ring-in .mk .ring-arc {
+      stroke-dashoffset: 0;
+    }
+
+    .mk .dot-halo {
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+
+    body.landed .mk .dot-halo {
+      animation: halo-ping 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    body.settled .mk .dot-core {
       animation: dot-breathe 3.2s ease-in-out infinite;
     }
 
@@ -113,6 +169,9 @@
       font-size: clamp(17px, 2.5vw, 22px);
       font-weight: 400;
       letter-spacing: -0.005em;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.55s ease, transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
     footer {
@@ -122,6 +181,26 @@
       font-weight: 400;
       letter-spacing: 0.02em;
       padding-top: 16px;
+      opacity: 0;
+      transition: opacity 0.6s ease 0.1s;
+    }
+
+    body.settled .badge,
+    body.settled .tagline,
+    body.settled footer {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @keyframes halo-ping {
+      0% {
+        opacity: 0.7;
+        transform: scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: scale(3.4);
+      }
     }
 
     @keyframes led-pulse {
@@ -145,9 +224,31 @@
     }
 
     @media (prefers-reduced-motion: reduce) {
+      .badge,
+      .ch,
+      .mk .ring-arc,
+      .tagline,
+      footer {
+        transition: none !important;
+      }
+      .stack,
+      .badge,
+      .tagline,
+      footer {
+        opacity: 1 !important;
+        transform: none !important;
+      }
+      .ch {
+        transform: none !important;
+        opacity: 1 !important;
+      }
+      .mk .ring-arc {
+        stroke-dashoffset: 0 !important;
+      }
       .led,
-      .mk circle {
-        animation: none;
+      .mk .dot-core,
+      .mk .dot-halo {
+        animation: none !important;
       }
     }
   </style>
@@ -159,7 +260,7 @@
         <span class="led" aria-hidden="true"></span>
         <span>Em breve</span>
       </div>
-      <h1 class="mk" data-mk aria-label="nunzo">nunz<svg viewBox="0 0 56 56" style="width:0.56em;height:0.56em;vertical-align:-0.012em;margin-left:0.04em;margin-right:0.03em" aria-hidden="true"><path d="M50.56 31.49A22.75 22.75 0 1 1 24.83 5.44" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round"/><circle cx="44.09" cy="11.91" r="3.8" fill="var(--dot)"/></svg></h1>
+      <h1 class="mk" data-mk aria-label="nunzo"></h1>
       <p class="tagline">Ninguém fica sem resposta.</p>
     </div>
   </main>
@@ -172,6 +273,8 @@
     cv.width = 520;
     cv.height = 320;
     const cx = cv.getContext("2d", { willReadFrequently: true });
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let started = false;
 
     function measure() {
       cx.clearRect(0, 0, cv.width, cv.height);
@@ -191,6 +294,9 @@
           }
         }
       }
+      if (r <= l || b <= t) {
+        return { w: 0.56, h: 0.56, below: 0.012, sh: 0.1, lsb: 0.04, rsb: 0.03 };
+      }
       const my = Math.round((t + b) / 2);
       let s = 0, x = l;
       while (x <= r && d[(my * W + x) * 4 + 3] > 128) {
@@ -207,7 +313,7 @@
       };
     }
 
-    function ring(m) {
+    function buildWordmark(m) {
       const W = m.w * 100, H = m.h * 100;
       const s = Math.min(m.sh * 100 * 0.94, W * 0.3);
       const rx = W / 2 - s / 2, ry = H / 2 - s / 2;
@@ -215,21 +321,113 @@
       const p = a => [cX + rx * Math.cos(a * Math.PI / 180), cY + ry * Math.sin(a * Math.PI / 180)];
       const [x1, y1] = p(8), [x2, y2] = p(-98), [dx, dy] = p(-45), dot = s * 0.4;
       const st = `width:${m.w}em;height:${m.h}em;vertical-align:${(-m.below).toFixed(4)}em;margin-left:${m.lsb.toFixed(4)}em;margin-right:${m.rsb.toFixed(4)}em`;
-      return `<svg viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}" style="${st}" aria-hidden="true"><path d="M${x1.toFixed(2)} ${y1.toFixed(2)}A${rx.toFixed(2)} ${ry.toFixed(2)} 0 1 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" fill="none" stroke="currentColor" stroke-width="${s.toFixed(2)}" stroke-linecap="round"/><circle cx="${dx.toFixed(2)}" cy="${dy.toFixed(2)}" r="${dot.toFixed(2)}" fill="var(--dot)"/></svg>`;
+
+      const letters = [
+        { c: "n", d: 195 },
+        { c: "u", d: 130 },
+        { c: "n", d: 65 },
+        { c: "z", d: 0 }
+      ].map(({ c, d }) =>
+        `<span class="ch-mask" aria-hidden="true"><span class="ch" style="--d:${d}ms">${c}</span></span>`
+      ).join("");
+
+      const svg =
+        `<svg viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}" style="${st}" aria-hidden="true">` +
+          `<path class="ring-arc" pathLength="100" d="M${x1.toFixed(2)} ${y1.toFixed(2)}A${rx.toFixed(2)} ${ry.toFixed(2)} 0 1 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" fill="none" stroke="currentColor" stroke-width="${s.toFixed(2)}" stroke-linecap="round"/>` +
+          `<circle class="dot-halo" cx="${dx.toFixed(2)}" cy="${dy.toFixed(2)}" r="${dot.toFixed(2)}" fill="none" stroke="var(--dot)" stroke-width="1.4"/>` +
+          `<circle class="dot-trail" cx="${dx.toFixed(2)}" cy="${dy.toFixed(2)}" r="${(dot * 0.68).toFixed(2)}" fill="var(--dot)" opacity="0"/>` +
+          `<circle class="dot-core" cx="${dx.toFixed(2)}" cy="${dy.toFixed(2)}" r="${dot.toFixed(2)}" fill="var(--dot)"/>` +
+        `</svg>`;
+
+      const el = document.querySelector("[data-mk]");
+      el.innerHTML = letters + svg;
+      return { el, dx, dy, dot };
     }
 
-    function paint() {
+    function cubic(p0, p1, p2, p3, t) {
+      const u = 1 - t;
+      return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3;
+    }
+
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function runSequence() {
+      if (started) return;
+      started = true;
+
       const m = measure();
-      if (!m || !isFinite(m.w) || m.w <= 0) return;
-      document.querySelectorAll("[data-mk]").forEach(e => {
-        e.innerHTML = `nunz${ring(m)}`;
-      });
+      const { el, dx, dy, dot } = buildWordmark(m);
+      const core = el.querySelector(".dot-core");
+      const trail = el.querySelector(".dot-trail");
+
+      document.body.classList.add("ready");
+
+      if (reducedMotion) {
+        document.body.classList.add("landed", "ring-in", "word-in", "settled");
+        return;
+      }
+
+      // Curva suave do ponto verde viajando da esquerda para a posição final no "o"
+      const x0 = dx - 250, y0 = dy + 58;
+      const x1 = dx - 165, y1 = dy + 96;
+      const x2 = dx - 54,  y2 = dy - 56;
+      const travelMs = 880;
+      const t0 = performance.now();
+      let ringTriggered = false;
+
+      core.setAttribute("cx", x0.toFixed(2));
+      core.setAttribute("cy", y0.toFixed(2));
+      core.setAttribute("r", "0");
+
+      function tick(now) {
+        const raw = Math.min(1, (now - t0) / travelMs);
+        const e = easeOutCubic(raw);
+
+        const cxNow = cubic(x0, x1, x2, dx, e);
+        const cyNow = cubic(y0, y1, y2, dy, e);
+        const rScale = raw < 0.14 ? raw / 0.14 : 1;
+
+        core.setAttribute("cx", cxNow.toFixed(2));
+        core.setAttribute("cy", cyNow.toFixed(2));
+        core.setAttribute("r", (dot * rScale).toFixed(2));
+
+        // Rastro sutil acompanhando o movimento durante o voo
+        const eTrail = easeOutCubic(Math.max(0, raw - 0.06));
+        trail.setAttribute("cx", cubic(x0, x1, x2, dx, eTrail).toFixed(2));
+        trail.setAttribute("cy", cubic(y0, y1, y2, dy, eTrail).toFixed(2));
+        trail.setAttribute("opacity", (Math.sin(Math.PI * raw) * 0.3).toFixed(3));
+
+        // O anel do "O" começa a se formar no momento da chegada do ponto
+        if (!ringTriggered && raw >= 0.78) {
+          ringTriggered = true;
+          document.body.classList.add("landed", "ring-in");
+          setTimeout(() => document.body.classList.add("word-in"), 250);
+          setTimeout(() => document.body.classList.add("settled"), 800);
+        }
+
+        if (raw < 1) {
+          requestAnimationFrame(tick);
+        } else {
+          core.setAttribute("cx", dx.toFixed(2));
+          core.setAttribute("cy", dy.toFixed(2));
+          core.setAttribute("r", dot.toFixed(2));
+          trail.setAttribute("opacity", "0");
+        }
+      }
+
+      requestAnimationFrame(tick);
     }
 
-    document.fonts.load(`${WGT} ${SIZE}px "${FONT}"`, "o")
+    const safety = setTimeout(runSequence, 850);
+    document.fonts.load(`${WGT} ${SIZE}px "${FONT}"`, "nunzo")
       .catch(() => {})
       .then(() => document.fonts.ready)
-      .then(paint);
+      .then(() => {
+        clearTimeout(safety);
+        runSequence();
+      });
   </script>
 </body>
 </html>
