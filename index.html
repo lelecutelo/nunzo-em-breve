@@ -4,10 +4,10 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>nunzo — Em breve</title>
-  <meta name="description" content="Ninguém fica sem resposta.">
+  <meta name="description" content="nunzo — Em breve.">
   <meta name="theme-color" content="#14181B">
   <meta property="og:title" content="nunzo — Em breve">
-  <meta property="og:description" content="Ninguém fica sem resposta.">
+  <meta property="og:description" content="nunzo — Em breve.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://nunzo.com.br">
   <link rel="icon" type="image/svg+xml" href="./favicon.svg">
@@ -57,19 +57,44 @@
       pointer-events: none;
     }
 
-    /* Proteção suave de contraste atrás do logo quando assenta */
-    .vignette {
+    .cycle-hud {
       position: fixed;
-      inset: 0;
-      z-index: 0;
-      pointer-events: none;
-      background: radial-gradient(ellipse 46% 32% at 50% 47%, rgba(20, 24, 27, 0.78) 0%, rgba(20, 24, 27, 0.34) 55%, rgba(20, 24, 27, 0) 100%);
+      top: max(24px, env(safe-area-inset-top));
+      left: 50%;
+      transform: translateX(-50%) translateY(-4px);
+      z-index: 2;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 13px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(20, 24, 27, 0.78);
+      color: var(--soft);
+      font-size: 12px;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.08em;
       opacity: 0;
-      transition: opacity 0.9s ease;
+      pointer-events: none;
+      transition: opacity 0.45s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    body.ring-in .vignette {
+    .cycle-hud .pulse {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--dot);
+    }
+
+    body.opening-hud .cycle-hud {
       opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    body.settled .cycle-hud {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-6px);
     }
 
     main,
@@ -88,7 +113,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 20px;
+      gap: 22px;
       opacity: 0;
     }
 
@@ -168,25 +193,13 @@
       animation: bloom-blink 2.2s ease-in-out infinite;
     }
 
-    .tagline {
-      margin: 2px 0 0;
-      color: var(--soft);
-      font-size: clamp(17px, 2.4vw, 22px);
-      font-weight: 400;
-      letter-spacing: -0.005em;
-      opacity: 0;
-      transform: translateY(10px);
-      transition: opacity 0.6s ease, transform 0.68s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
     .badge {
       display: inline-flex;
       align-items: center;
-      margin-top: 6px;
       padding: 6px 16px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: rgba(20, 24, 27, 0.68);
+      background: rgba(20, 24, 27, 0.72);
       color: var(--soft);
       font-size: 11.5px;
       font-weight: 500;
@@ -194,7 +207,7 @@
       text-transform: uppercase;
       opacity: 0;
       transform: translateY(8px);
-      transition: opacity 0.6s ease 0.14s, transform 0.68s cubic-bezier(0.16, 1, 0.3, 1) 0.14s;
+      transition: opacity 0.6s ease 0.1s, transform 0.68s cubic-bezier(0.16, 1, 0.3, 1) 0.1s;
     }
 
     footer {
@@ -208,7 +221,7 @@
       letter-spacing: 0.02em;
       padding-top: 16px;
       opacity: 0;
-      transition: opacity 0.65s ease 0.2s;
+      transition: opacity 0.65s ease 0.18s;
     }
 
     .sep {
@@ -220,7 +233,6 @@
       opacity: 0.78;
     }
 
-    body.settled .tagline,
     body.settled .badge,
     body.settled footer {
       opacity: 1;
@@ -229,10 +241,9 @@
 
     body.resetting .ch,
     body.resetting .mk .ring-arc,
-    body.resetting .tagline,
     body.resetting .badge,
     body.resetting footer,
-    body.resetting .vignette {
+    body.resetting .cycle-hud {
       transition: none !important;
     }
 
@@ -258,21 +269,21 @@
       .badge,
       .ch,
       .mk .ring-arc,
-      .tagline,
       footer,
-      .vignette {
+      .cycle-hud {
         transition: none !important;
       }
       .stack,
       .badge,
-      .tagline,
       footer,
-      .vignette,
       .ch,
       .mk .dot-core,
       .mk .dot-bloom {
         opacity: 1 !important;
         transform: none !important;
+      }
+      .cycle-hud {
+        opacity: 0 !important;
       }
       .mk .ring-arc {
         stroke-dashoffset: 0 !important;
@@ -286,12 +297,15 @@
 </head>
 <body>
   <canvas id="map" aria-hidden="true"></canvas>
-  <div class="vignette" aria-hidden="true"></div>
+
+  <div class="cycle-hud" aria-hidden="true">
+    <span class="pulse"></span>
+    <span id="cycle-time">21:30</span>
+  </div>
 
   <main>
     <div class="stack">
       <h1 class="mk" data-mk aria-label="nunzo" title="Clique para rever a animação"></h1>
-      <p class="tagline">Ninguém fica sem resposta.</p>
       <div class="badge">Em breve</div>
     </div>
   </main>
@@ -386,7 +400,7 @@
       return el;
     }
 
-    // Relógio 24h discreto
+    // Relógio ao vivo discreto no rodapé
     const clockEl = document.getElementById("clock");
     function updateClock() {
       const now = new Date();
@@ -396,6 +410,15 @@
     updateClock();
     setInterval(updateClock, 1000);
 
+    // Ciclo 24h durante a abertura (21:30 -> 06:00)
+    const cycleTimeEl = document.getElementById("cycle-time");
+    function formatCycleMinutes(totalMins) {
+      const wrapped = ((Math.round(totalMins) % 1440) + 1440) % 1440;
+      const h = Math.floor(wrapped / 60);
+      const m = wrapped % 60;
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+    }
+
     // Mapa vetorial real em estilo Dark Maps
     const MAP = window.NUNZO_MAP || { w: 2000, h: 1950, v: [], r: [], p: [] };
     const canvas = document.getElementById("map");
@@ -403,29 +426,41 @@
     const staticCanvas = document.createElement("canvas");
     const sCtx = staticCanvas.getContext("2d");
 
+    const SPOT_R = 230;
+    const spotCanvas = document.createElement("canvas");
+    const spCtx = spotCanvas.getContext("2d");
+
     let W = 0, H = 0, DPR = 1;
-    let screenVerts = []; // [sx, sy]
+    let screenVerts = [];
     let mainComp = new Set();
     let adj = [];
-    let majorSegs = []; // segmentos de tier >= 1 para brilho suave no hover
+    let majorSegs = [];
     let route = [];
     let routeTotalLen = 0;
     let timers = [];
     let rafId = 0;
 
-    const pointer = { x: -9999, y: -9999, tx: -9999, ty: -9999, active: false };
+    const pointer = {
+      x: -9999,
+      y: -9999,
+      tx: -9999,
+      ty: -9999,
+      active: false,
+      strength: 0
+    };
+
+    const CALL_TIMES = ["21:42", "23:18", "01:54", "04:26"];
 
     const state = {
       phase: "idle", // idle | mapFade | streetRun | leap | settled
       phaseStart: 0,
+      runStart: 0,
       targetX: 0,
       targetY: 0,
       targetR: 6,
       leapFrom: { x: 0, y: 0 },
       trail: [],
-      beacons: [],
-      microRuns: [],
-      nextMicroAt: 0
+      beacons: []
     };
 
     function cubic(p0, p1, p2, p3, t) {
@@ -454,7 +489,6 @@
       state.targetR = Math.max(3, rect.width / 2);
     }
 
-    // Constrói o grafo viário uma única vez a partir dos vetores reais
     function initGraph() {
       const n = MAP.v.length;
       adj = Array.from({ length: n }, () => []);
@@ -471,7 +505,6 @@
         }
       }
 
-      // Maior componente conexa do mapa
       const seen = new Uint8Array(n);
       let best = [];
       for (let i = 0; i < n; i++) {
@@ -504,7 +537,11 @@
       staticCanvas.height = Math.round(H * DPR);
       sCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-      // Escala estilo mapa urbano (cobre bem desktop e celular sem ficar espremido)
+      const spSize = SPOT_R * 2;
+      spotCanvas.width = Math.round(spSize * DPR);
+      spotCanvas.height = Math.round(spSize * DPR);
+      spCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
       const scale = Math.max(W / MAP.w, H / MAP.h, 0.58) * 1.12;
       const focusX = MAP.w * 0.50;
       const focusY = MAP.h * 0.52;
@@ -513,11 +550,10 @@
 
       screenVerts = MAP.v.map(([x, y]) => [ox + x * scale, oy + y * scale]);
 
-      // Pré-renderiza o mapa estático em estilo Google Maps escuro
+      // Pré-renderiza o mapa real em estilo Dark Maps
       sCtx.fillStyle = "#14181B";
       sCtx.fillRect(0, 0, W, H);
 
-      // Parques / áreas verdes bem sutis
       sCtx.fillStyle = "#18211E";
       sCtx.strokeStyle = "#1C2824";
       sCtx.lineWidth = 1;
@@ -534,7 +570,6 @@
         sCtx.stroke();
       }
 
-      // Separa vias por hierarquia
       const byTier = [[], [], [], []];
       majorSegs = [];
       for (const [tier, ids] of MAP.r) {
@@ -575,24 +610,21 @@
 
       const wScale = clamp01((scale - 0.5) / 0.6) * 0.35 + 0.85;
 
-      // Passagem 1: ruas locais e contornos escuros (casings) para cruzamentos perfeitos
       strokeTier(byTier[0], "#1D2429", 1.05 * wScale);
       strokeTier(byTier[1], "#0F1315", 2.8 * wScale);
       strokeTier(byTier[2], "#0D1113", 4.6 * wScale);
       strokeTier(byTier[3], "#0A0D0F", 6.4 * wScale);
 
-      // Passagem 2: preenchimento das vias sobre os casings (estilo Google Maps dark)
       strokeTier(byTier[1], "#242D33", 1.65 * wScale);
       strokeTier(byTier[2], "#2D3840", 2.85 * wScale);
       strokeTier(byTier[3], "#36434C", 4.1 * wScale);
 
-      // Vinheta suave nas bordas da tela
       const edgeGrad = sCtx.createRadialGradient(
         W * 0.5, H * 0.5, Math.min(W, H) * 0.25,
         W * 0.5, H * 0.5, Math.hypot(W, H) * 0.55
       );
       edgeGrad.addColorStop(0, "rgba(20, 24, 27, 0)");
-      edgeGrad.addColorStop(1, "rgba(12, 15, 17, 0.72)");
+      edgeGrad.addColorStop(1, "rgba(20, 24, 27, 0.78)");
       sCtx.fillStyle = edgeGrad;
       sCtx.fillRect(0, 0, W, H);
 
@@ -606,7 +638,7 @@
         let bestD = Infinity;
         for (const idx of mainComp) {
           const p = screenVerts[idx];
-          if (p[0] < 44 || p[0] > W - 44 || p[1] < 44 || p[1] > H - 64) continue;
+          if (p[0] < 64 || p[0] > W - 64 || p[1] < 78 || p[1] > H - 72) continue;
           if (adj[idx].length < 2) continue;
           const d = Math.hypot(p[0] - tx, p[1] - ty);
           if (d < bestD) {
@@ -617,24 +649,21 @@
         return best >= 0 ? best : [...mainComp][0];
       }
 
-      const p0 = pickClosestNode(W * 0.16, H * 0.27);
-      const p1 = pickClosestNode(W * 0.24, H * 0.76);
-      const p2 = pickClosestNode(W * 0.75, H * 0.74);
-      const p3 = pickClosestNode(W * 0.80, H * 0.25);
+      const p0 = pickClosestNode(W * 0.17, H * 0.28);
+      const p1 = pickClosestNode(W * 0.23, H * 0.75);
+      const p2 = pickClosestNode(W * 0.76, H * 0.73);
+      const p3 = pickClosestNode(W * 0.80, H * 0.26);
       const waypoints = [p0, p1, p2, p3];
 
-      // Menor caminho (Dijkstra) com prioridade para avenidas, igual roteamento de mapa
       function shortestPath(start, goal) {
         const n = MAP.v.length;
         const dist = new Float64Array(n).fill(Infinity);
         const prev = new Int32Array(n).fill(-1);
         const visited = new Uint8Array(n);
-        // Min-heap simples para ~3600 vértices
         const heap = [[0, start]];
         dist[start] = 0;
 
         while (heap.length > 0) {
-          // Extrai mínimo
           const top = heap[0];
           const last = heap.pop();
           if (heap.length > 0) {
@@ -703,10 +732,13 @@
       state.beacons = waypoints.map((nodeIdx, idx) => ({
         x: screenVerts[nodeIdx][0],
         y: screenVerts[nodeIdx][1],
-        appearAt: idx * 180,
+        timeLabel: CALL_TIMES[idx],
+        appearAt: idx * 360,
         triggerDist: wpDist[idx] || 0,
         answered: false,
-        answeredAt: 0
+        answeredAt: 0,
+        barA: idx % 2 === 0 ? 28 : 22,
+        barB: idx % 2 === 0 ? 17 : 26
       }));
 
       state.leapFrom = { x: screenVerts[p3][0], y: screenVerts[p3][1] };
@@ -722,6 +754,117 @@
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    function drawRoundedRect(c, x, y, w, h, r) {
+      c.beginPath();
+      c.moveTo(x + r, y);
+      c.arcTo(x + w, y, x + w, y + h, r);
+      c.arcTo(x + w, y + h, x, y + h, r);
+      c.arcTo(x, y + h, x, y, r);
+      c.arcTo(x, y, x + w, y, r);
+      c.closePath();
+    }
+
+    function drawCallCard(b, now, globalFade) {
+      const age = state.phase === "mapFade" ? (now - state.phaseStart) : 9999;
+      if (state.phase === "mapFade" && age < b.appearAt) return;
+
+      const cardW = 76;
+      const cardH = 34;
+      // Posiciona acima ou abaixo dependendo da metade da tela, mantendo sempre dentro das margens
+      const placeBelow = b.y < 88;
+      const cx = Math.min(Math.max(b.x, cardW * 0.5 + 14), W - cardW * 0.5 - 14);
+      const x = cx - cardW * 0.5;
+      const y = placeBelow ? b.y + 14 : b.y - cardH - 14;
+
+      const enterProg = state.phase === "mapFade"
+        ? clamp01((age - b.appearAt) / 260)
+        : 1;
+      const alpha = enterProg * globalFade;
+      if (alpha <= 0.02) return;
+
+      const rise = (1 - easeOutCubic(enterProg)) * 6;
+      const cy = y + (placeBelow ? -rise : rise);
+
+      ctx.save();
+      ctx.globalAlpha = alpha;
+
+      // Haste discreta ligando o cartão ao cruzamento
+      ctx.strokeStyle = b.answered ? "rgba(43, 212, 107, 0.45)" : "rgba(255, 255, 255, 0.16)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(b.x, b.y);
+      ctx.lineTo(b.x, placeBelow ? cy : cy + cardH);
+      ctx.stroke();
+
+      // Cartão mínimo do chamado (sem texto revelando nicho: só horário + barras-esqueleto)
+      drawRoundedRect(ctx, x, cy, cardW, cardH, 8);
+      ctx.fillStyle = "rgba(21, 25, 28, 0.92)";
+      ctx.fill();
+      ctx.strokeStyle = b.answered ? "rgba(43, 212, 107, 0.52)" : "rgba(255, 255, 255, 0.14)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // Bolinha de status do chamado
+      ctx.fillStyle = b.answered ? "#2BD46B" : "rgba(255, 255, 255, 0.78)";
+      ctx.beginPath();
+      ctx.arc(x + 11, cy + 11, 2.3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Horário do chamado (ex.: 23:18)
+      ctx.fillStyle = b.answered ? "rgba(255, 255, 255, 0.92)" : "rgba(195, 204, 207, 0.85)";
+      ctx.font = '500 9.5px "Outfit", sans-serif';
+      ctx.textBaseline = "middle";
+      ctx.fillText(b.timeLabel, x + 17.5, cy + 11.2);
+
+      // Visto verde sutil quando respondido
+      if (b.answered) {
+        const chk = clamp01((now - b.answeredAt) / 220);
+        ctx.strokeStyle = "#2BD46B";
+        ctx.lineWidth = 1.4;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.beginPath();
+        ctx.moveTo(x + cardW - 16, cy + 11.2);
+        ctx.lineTo(x + cardW - 13.5, cy + 13.6);
+        if (chk > 0.3) {
+          ctx.lineTo(x + cardW - 9, cy + 8.6);
+        }
+        ctx.stroke();
+      }
+
+      // Duas barras-esqueleto simulando mensagem recebida sem entregar conteúdo
+      ctx.fillStyle = b.answered ? "rgba(43, 212, 107, 0.25)" : "rgba(255, 255, 255, 0.2)";
+      drawRoundedRect(ctx, x + 9, cy + 19.5, b.barA, 2.6, 1.3);
+      ctx.fill();
+      drawRoundedRect(ctx, x + 9, cy + 24.5, b.barB, 2.6, 1.3);
+      ctx.fill();
+
+      ctx.restore();
+
+      // Marcador no cruzamento
+      if (!b.answered) {
+        const pulse = 0.55 + 0.45 * Math.sin(now * 0.008 + b.x);
+        ctx.fillStyle = `rgba(255, 255, 255, ${(0.78 * alpha).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = `rgba(255, 255, 255, ${(0.26 * pulse * alpha).toFixed(3)})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 4.8 + pulse * 5, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        const glowAge = (now - b.answeredAt) / 900;
+        const glowFade = Math.max(0.22, 1 - glowAge * 0.45) * alpha;
+        drawSoftGlow(b.x, b.y, 20, glowFade * 0.72);
+        ctx.fillStyle = `rgba(43, 212, 107, ${(0.95 * alpha).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(b.x, b.y, 3.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
 
     function sampleRouteAt(dist) {
@@ -745,80 +888,103 @@
       return { x: p[0], y: p[1] };
     }
 
-    function spawnMicroDispatch(now) {
-      if (mainComp.size === 0) return;
-      const arr = [...mainComp];
-      let start = -1;
-      for (let tries = 0; tries < 30; tries++) {
-        const idx = arr[Math.floor(Math.random() * arr.length)];
-        const p = screenVerts[idx];
-        if (p[0] < 50 || p[0] > W - 50 || p[1] < 50 || p[1] > H - 65) continue;
-        if (Math.abs(p[0] - W * 0.5) < Math.min(W * 0.3, 290) && Math.abs(p[1] - H * 0.47) < 115) continue;
-        if (adj[idx].length >= 2) {
-          start = idx;
-          break;
+    function drawPointerSpotlight() {
+      if (pointer.strength <= 0.01) return;
+
+      const spSize = SPOT_R * 2;
+      const sx = pointer.x - SPOT_R;
+      const sy = pointer.y - SPOT_R;
+
+      const srcX0 = Math.max(0, sx);
+      const srcY0 = Math.max(0, sy);
+      const srcX1 = Math.min(W, sx + spSize);
+      const srcY1 = Math.min(H, sy + spSize);
+      const sw = srcX1 - srcX0;
+      const sh = srcY1 - srcY0;
+      if (sw <= 0 || sh <= 0) return;
+
+      spCtx.clearRect(0, 0, spSize, spSize);
+      spCtx.globalCompositeOperation = "source-over";
+      spCtx.drawImage(
+        staticCanvas,
+        srcX0 * DPR, srcY0 * DPR, sw * DPR, sh * DPR,
+        srcX0 - sx, srcY0 - sy, sw, sh
+      );
+
+      // Realça sutilmente vias principais dentro do foco do mouse
+      spCtx.lineCap = "round";
+      for (const seg of majorSegs) {
+        const dp = Math.hypot(seg.mx - pointer.x, seg.my - pointer.y);
+        if (dp < SPOT_R * 0.78) {
+          const a = (1 - dp / (SPOT_R * 0.78)) * 0.24;
+          spCtx.strokeStyle = `rgba(43, 212, 107, ${a.toFixed(3)})`;
+          spCtx.lineWidth = seg.tier >= 3 ? 2.8 : seg.tier === 2 ? 2.0 : 1.25;
+          spCtx.beginPath();
+          spCtx.moveTo(seg.ax - sx, seg.ay - sy);
+          spCtx.lineTo(seg.bx - sx, seg.by - sy);
+          spCtx.stroke();
         }
       }
-      if (start < 0) return;
 
-      const hops = 4 + Math.floor(Math.random() * 5);
-      const pathSegs = [];
-      let cur = start, prev = -1, total = 0;
-      for (let h = 0; h < hops; h++) {
-        const choices = adj[cur].filter(e => e.to !== prev);
-        if (choices.length === 0) break;
-        const pick = choices[Math.floor(Math.random() * choices.length)];
-        const a = screenVerts[cur], b = screenVerts[pick.to];
-        const sLen = Math.hypot(a[0] - b[0], a[1] - b[1]);
-        pathSegs.push({ from: cur, to: pick.to, len: sLen, startDist: total, endDist: total + sLen });
-        total += sLen;
-        prev = cur;
-        cur = pick.to;
-      }
-      if (pathSegs.length === 0 || total < 30) return;
+      // Máscara radial suave que dissolve nas bordas
+      spCtx.globalCompositeOperation = "destination-in";
+      const mask = spCtx.createRadialGradient(SPOT_R, SPOT_R, 0, SPOT_R, SPOT_R, SPOT_R);
+      const peak = 0.65 * pointer.strength;
+      mask.addColorStop(0, `rgba(0, 0, 0, ${peak.toFixed(3)})`);
+      mask.addColorStop(0.45, `rgba(0, 0, 0, ${(peak * 0.45).toFixed(3)})`);
+      mask.addColorStop(1, "rgba(0, 0, 0, 0)");
+      spCtx.fillStyle = mask;
+      spCtx.fillRect(0, 0, spSize, spSize);
+      spCtx.globalCompositeOperation = "source-over";
 
-      state.microRuns.push({
-        segs: pathSegs,
-        total,
-        start: now,
-        duration: 1200 + Math.min(1200, total * 4.5),
-        targetX: screenVerts[cur][0],
-        targetY: screenVerts[cur][1]
-      });
+      ctx.drawImage(spotCanvas, sx, sy, spSize, spSize);
     }
 
     function renderFrame(now) {
       ctx.clearRect(0, 0, W, H);
 
-      // Desenha o mapa real pré-renderizado
+      if (pointer.active) {
+        pointer.x += (pointer.tx - pointer.x) * 0.18;
+        pointer.y += (pointer.ty - pointer.y) * 0.18;
+        pointer.strength = Math.min(1, pointer.strength + 0.08);
+      } else {
+        pointer.strength = Math.max(0, pointer.strength - 0.045);
+      }
+
+      // Opacidade do mapa inteiro: presente na abertura, depois some suavemente para foco total no Nunzo
       let mapAlpha = 1;
       if (state.phase === "mapFade") {
-        mapAlpha = clamp01((now - state.phaseStart) / 360);
+        mapAlpha = clamp01((now - state.phaseStart) / 420);
       } else if (state.phase === "settled") {
-        mapAlpha = 0.85;
-      }
-      if (mapAlpha < 0.999) ctx.globalAlpha = mapAlpha;
-      ctx.drawImage(staticCanvas, 0, 0, W, H);
-      ctx.globalAlpha = 1;
-
-      if (pointer.active) {
-        pointer.x += (pointer.tx - pointer.x) * 0.16;
-        pointer.y += (pointer.ty - pointer.y) * 0.16;
+        const settleP = clamp01((now - state.phaseStart) / 1150);
+        mapAlpha = 1 - easeOutCubic(settleP);
       }
 
+      if (mapAlpha > 0.01) {
+        ctx.globalAlpha = mapAlpha;
+        ctx.drawImage(staticCanvas, 0, 0, W, H);
+        ctx.globalAlpha = 1;
+      }
+
+      // Avança o ciclo 24h (21:30 -> 06:00 = 510 min) e a bolinha verde
       let traveler = null;
       let activeDist = -1;
+      const runMs = 2350;
+      const leapMs = 760;
 
-      if (state.phase === "mapFade" && now - state.phaseStart >= 360) {
+      if (state.phase === "mapFade" && now - state.phaseStart >= 420) {
         state.phase = "streetRun";
         state.phaseStart = now;
+        state.runStart = now;
       }
 
       if (state.phase === "streetRun") {
-        const runMs = 2150;
         const raw = clamp01((now - state.phaseStart) / runMs);
         const e = easeInOutCubic(raw);
         activeDist = e * routeTotalLen;
+
+        // Relógio noturno 21:30 -> 04:45 durante o trajeto pelas ruas
+        cycleTimeEl.textContent = formatCycleMinutes(21 * 60 + 30 + raw * 435);
 
         const pos = sampleRouteAt(activeDist);
         traveler = { x: pos.x, y: pos.y, r: Math.max(4.5, state.targetR * 0.82) };
@@ -838,9 +1004,11 @@
           state.phaseStart = now;
         }
       } else if (state.phase === "leap") {
-        const leapMs = 760;
         const raw = clamp01((now - state.phaseStart) / leapMs);
         const e = easeOutCubic(raw);
+
+        // Relógio termina a madrugada chegando às 06:00 no pouso
+        cycleTimeEl.textContent = formatCycleMinutes(21 * 60 + 30 + 435 + raw * 75);
 
         const p0x = state.leapFrom.x, p0y = state.leapFrom.y;
         const p1x = p0x + (state.targetX - p0x) * 0.35;
@@ -862,33 +1030,16 @@
         }
       }
 
-      // Ilumina avenidas próximas ao ponteiro após assentar
-      if (state.phase === "settled" && pointer.active) {
-        ctx.lineCap = "round";
-        for (const seg of majorSegs) {
-          const dp = Math.hypot(seg.mx - pointer.x, seg.my - pointer.y);
-          if (dp < 145) {
-            const a = (1 - dp / 145) * 0.22;
-            ctx.strokeStyle = `rgba(43, 212, 107, ${a.toFixed(3)})`;
-            ctx.lineWidth = seg.tier >= 3 ? 3.2 : seg.tier === 2 ? 2.2 : 1.4;
-            ctx.beginPath();
-            ctx.moveTo(seg.ax, seg.ay);
-            ctx.lineTo(seg.bx, seg.by);
-            ctx.stroke();
-          }
-        }
-      }
-
-      // Rota percorrida acesa em verde pelas ruas reais
+      // Rota percorrida em verde durante a abertura
       if (state.phase === "streetRun" || state.phase === "leap" || state.phase === "settled") {
         const routeFade = state.phase === "settled"
-          ? Math.max(0, 1 - (now - state.phaseStart) / 2600)
+          ? Math.max(0, 1 - (now - state.phaseStart) / 950)
           : 1;
 
         if (routeFade > 0.01) {
           ctx.lineCap = "round";
           ctx.lineJoin = "round";
-          ctx.strokeStyle = `rgba(43, 212, 107, ${(0.42 * routeFade).toFixed(3)})`;
+          ctx.strokeStyle = `rgba(43, 212, 107, ${(0.44 * routeFade).toFixed(3)})`;
           ctx.lineWidth = 2.4;
           ctx.beginPath();
 
@@ -913,90 +1064,21 @@
         }
       }
 
-      // 4 sinais pela cidade
+      // Cartões dos 4 chamados no mapa
       const beaconFade = state.phase === "settled"
-        ? Math.max(0, 1 - (now - state.phaseStart) / 2800)
+        ? Math.max(0, 1 - (now - state.phaseStart) / 850)
         : 1;
 
       if (beaconFade > 0.01) {
-        const elapsedSinceStart = state.phase === "mapFade" ? now - state.phaseStart : 9999;
         for (const b of state.beacons) {
-          if (state.phase === "mapFade" && elapsedSinceStart < b.appearAt) continue;
-
-          if (!b.answered) {
-            const pulse = 0.55 + 0.45 * Math.sin(now * 0.008 + b.x);
-            ctx.fillStyle = `rgba(255, 255, 255, ${(0.76 * beaconFade).toFixed(3)})`;
-            ctx.beginPath();
-            ctx.arc(b.x, b.y, 3.2, 0, Math.PI * 2);
-            ctx.fill();
-
-            ctx.strokeStyle = `rgba(255, 255, 255, ${(0.28 * pulse * beaconFade).toFixed(3)})`;
-            ctx.lineWidth = 1;
-            ctx.beginPath();
-            ctx.arc(b.x, b.y, 5 + pulse * 5.5, 0, Math.PI * 2);
-            ctx.stroke();
-          } else {
-            const age = (now - b.answeredAt) / 900;
-            const fade = Math.max(0.25, 1 - age * 0.45) * beaconFade;
-            drawSoftGlow(b.x, b.y, 20, fade * 0.72);
-            ctx.fillStyle = `rgba(43, 212, 107, ${(0.95 * beaconFade).toFixed(3)})`;
-            ctx.beginPath();
-            ctx.arc(b.x, b.y, 3.4, 0, Math.PI * 2);
-            ctx.fill();
-          }
+          drawCallCard(b, now, beaconFade);
         }
       }
 
-      // Micro-despachos pelas ruas depois de assentado
-      if (state.phase === "settled" && !reducedMotion && now >= state.nextMicroAt) {
-        spawnMicroDispatch(now);
-        state.nextMicroAt = now + 2200 + Math.random() * 2400;
+      // Depois que o Nunzo assenta, o fundo fica minimalista e só revela o mapa sob o mouse
+      if (state.phase === "settled" && mapAlpha < 0.95) {
+        drawPointerSpotlight();
       }
-
-      state.microRuns = state.microRuns.filter(run => {
-        const p = (now - run.start) / run.duration;
-        if (p >= 1) return false;
-
-        const env = p < 0.15 ? p / 0.15 : p > 0.78 ? (1 - p) / 0.22 : 1;
-        const dist = easeInOutCubic(p) * run.total;
-
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.strokeStyle = `rgba(43, 212, 107, ${(0.32 * env).toFixed(3)})`;
-        ctx.lineWidth = 1.8;
-        ctx.beginPath();
-        let moved = false;
-        let headX = 0, headY = 0;
-
-        for (const seg of run.segs) {
-          if (dist <= seg.startDist) break;
-          const f = dist >= seg.endDist ? 1 : (dist - seg.startDist) / seg.len;
-          const a = screenVerts[seg.from], b = screenVerts[seg.to];
-          headX = a[0] + (b[0] - a[0]) * f;
-          headY = a[1] + (b[1] - a[1]) * f;
-          if (!moved) {
-            ctx.moveTo(a[0], a[1]);
-            moved = true;
-          }
-          ctx.lineTo(headX, headY);
-        }
-        ctx.stroke();
-
-        if (moved) {
-          drawSoftGlow(headX, headY, 14, env * 0.78);
-          ctx.fillStyle = `rgba(43, 212, 107, ${(0.92 * env).toFixed(3)})`;
-          ctx.beginPath();
-          ctx.arc(headX, headY, 2.2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-
-        ctx.fillStyle = `rgba(255, 255, 255, ${(0.48 * env).toFixed(3)})`;
-        ctx.beginPath();
-        ctx.arc(run.targetX, run.targetY, 2.1, 0, Math.PI * 2);
-        ctx.fill();
-
-        return true;
-      });
 
       // Ponto verde principal viajando
       if (traveler) {
@@ -1034,18 +1116,17 @@
       state.phase = "settled";
       state.phaseStart = now;
       state.trail = [];
-      state.nextMicroAt = now + 2200;
 
       document.body.classList.add("dot-landed");
       timers.push(setTimeout(() => document.body.classList.add("ring-in"), 30));
-      timers.push(setTimeout(() => document.body.classList.add("word-in"), 300));
-      timers.push(setTimeout(() => document.body.classList.add("settled"), 880));
+      timers.push(setTimeout(() => document.body.classList.add("word-in"), 280));
+      timers.push(setTimeout(() => document.body.classList.add("settled"), 820));
     }
 
     function startExperience(isReplay) {
       clearTimers();
       document.body.classList.add("resetting");
-      document.body.classList.remove("dot-landed", "ring-in", "word-in", "settled");
+      document.body.classList.remove("opening-hud", "dot-landed", "ring-in", "word-in", "settled");
       void document.body.offsetWidth;
       document.body.classList.remove("resetting");
 
@@ -1066,17 +1147,18 @@
         return;
       }
 
+      cycleTimeEl.textContent = "21:30";
       state.phase = "mapFade";
       state.phaseStart = performance.now();
       state.trail = [];
-      state.microRuns = [];
+      document.body.classList.add("opening-hud");
 
       if (!rafId) {
         rafId = requestAnimationFrame(renderFrame);
       }
     }
 
-    window.addEventListener("pointermove", e => {
+    function updatePointer(e) {
       pointer.tx = e.clientX;
       pointer.ty = e.clientY;
       if (!pointer.active) {
@@ -1084,7 +1166,10 @@
         pointer.y = e.clientY;
       }
       pointer.active = true;
-    }, { passive: true });
+    }
+
+    window.addEventListener("pointermove", updatePointer, { passive: true });
+    window.addEventListener("pointerdown", updatePointer, { passive: true });
 
     window.addEventListener("pointerleave", () => {
       pointer.active = false;
