@@ -57,46 +57,6 @@
       pointer-events: none;
     }
 
-    .cycle-hud {
-      position: fixed;
-      top: max(24px, env(safe-area-inset-top));
-      left: 50%;
-      transform: translateX(-50%) translateY(-4px);
-      z-index: 2;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 13px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(20, 24, 27, 0.78);
-      color: var(--soft);
-      font-size: 12px;
-      font-weight: 500;
-      font-variant-numeric: tabular-nums;
-      letter-spacing: 0.08em;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.45s ease, transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-
-    .cycle-hud .pulse {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--dot);
-    }
-
-    body.opening-hud .cycle-hud {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    body.settled .cycle-hud {
-      opacity: 0;
-      transform: translateX(-50%) translateY(-6px);
-    }
-
     main,
     footer {
       position: relative;
@@ -242,8 +202,7 @@
     body.resetting .ch,
     body.resetting .mk .ring-arc,
     body.resetting .badge,
-    body.resetting footer,
-    body.resetting .cycle-hud {
+    body.resetting footer {
       transition: none !important;
     }
 
@@ -269,8 +228,7 @@
       .badge,
       .ch,
       .mk .ring-arc,
-      footer,
-      .cycle-hud {
+      footer {
         transition: none !important;
       }
       .stack,
@@ -281,9 +239,6 @@
       .mk .dot-bloom {
         opacity: 1 !important;
         transform: none !important;
-      }
-      .cycle-hud {
-        opacity: 0 !important;
       }
       .mk .ring-arc {
         stroke-dashoffset: 0 !important;
@@ -297,11 +252,6 @@
 </head>
 <body>
   <canvas id="map" aria-hidden="true"></canvas>
-
-  <div class="cycle-hud" aria-hidden="true">
-    <span class="pulse"></span>
-    <span id="cycle-time">21:30</span>
-  </div>
 
   <main>
     <div class="stack">
@@ -409,15 +359,6 @@
     }
     updateClock();
     setInterval(updateClock, 1000);
-
-    // Ciclo 24h durante a abertura (21:30 -> 06:00)
-    const cycleTimeEl = document.getElementById("cycle-time");
-    function formatCycleMinutes(totalMins) {
-      const wrapped = ((Math.round(totalMins) % 1440) + 1440) % 1440;
-      const h = Math.floor(wrapped / 60);
-      const m = wrapped % 60;
-      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-    }
 
     // Mapa vetorial real em estilo Dark Maps
     const MAP = window.NUNZO_MAP || { w: 2000, h: 1950, v: [], r: [], p: [] };
@@ -983,9 +924,6 @@
         const e = easeInOutCubic(raw);
         activeDist = e * routeTotalLen;
 
-        // Relógio noturno 21:30 -> 04:45 durante o trajeto pelas ruas
-        cycleTimeEl.textContent = formatCycleMinutes(21 * 60 + 30 + raw * 435);
-
         const pos = sampleRouteAt(activeDist);
         traveler = { x: pos.x, y: pos.y, r: Math.max(4.5, state.targetR * 0.82) };
 
@@ -1006,9 +944,6 @@
       } else if (state.phase === "leap") {
         const raw = clamp01((now - state.phaseStart) / leapMs);
         const e = easeOutCubic(raw);
-
-        // Relógio termina a madrugada chegando às 06:00 no pouso
-        cycleTimeEl.textContent = formatCycleMinutes(21 * 60 + 30 + 435 + raw * 75);
 
         const p0x = state.leapFrom.x, p0y = state.leapFrom.y;
         const p1x = p0x + (state.targetX - p0x) * 0.35;
@@ -1126,7 +1061,7 @@
     function startExperience(isReplay) {
       clearTimers();
       document.body.classList.add("resetting");
-      document.body.classList.remove("opening-hud", "dot-landed", "ring-in", "word-in", "settled");
+      document.body.classList.remove("dot-landed", "ring-in", "word-in", "settled");
       void document.body.offsetWidth;
       document.body.classList.remove("resetting");
 
@@ -1147,11 +1082,9 @@
         return;
       }
 
-      cycleTimeEl.textContent = "21:30";
       state.phase = "mapFade";
       state.phaseStart = performance.now();
       state.trail = [];
-      document.body.classList.add("opening-hud");
 
       if (!rafId) {
         rafId = requestAnimationFrame(renderFrame);
