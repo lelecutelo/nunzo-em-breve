@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>nunzo — Em breve</title>
   <meta name="description" content="Ninguém fica sem resposta.">
-  <meta name="theme-color" content="#15191C">
+  <meta name="theme-color" content="#14181B">
   <meta property="og:title" content="nunzo — Em breve">
   <meta property="og:description" content="Ninguém fica sem resposta.">
   <meta property="og:type" content="website">
@@ -16,9 +16,7 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500&display=swap">
   <style>
     :root {
-      --ink: #15191C;
-      --ink-deep: #0E1214;
-      --ink-hi: #1A2024;
+      --ink: #14181B;
       --dot: #2BD46B;
       --soft: #A3ABAE;
       --muted: #6C767C;
@@ -38,7 +36,6 @@
 
     body {
       position: relative;
-      background: radial-gradient(circle at 50% 47%, var(--ink-hi) 0%, var(--ink) 56%, var(--ink-deep) 100%);
       background-color: var(--ink);
       color: var(--paper);
       font-family: var(--font);
@@ -60,13 +57,13 @@
       pointer-events: none;
     }
 
-    /* Sutil proteção de contraste atrás do logo após assentar */
+    /* Proteção suave de contraste atrás do logo quando assenta */
     .vignette {
       position: fixed;
       inset: 0;
       z-index: 0;
       pointer-events: none;
-      background: radial-gradient(ellipse 46% 32% at 50% 47%, rgba(21, 25, 28, 0.72) 0%, rgba(21, 25, 28, 0.25) 55%, rgba(21, 25, 28, 0) 100%);
+      background: radial-gradient(ellipse 46% 32% at 50% 47%, rgba(20, 24, 27, 0.78) 0%, rgba(20, 24, 27, 0.34) 55%, rgba(20, 24, 27, 0) 100%);
       opacity: 0;
       transition: opacity 0.9s ease;
     }
@@ -189,7 +186,7 @@
       padding: 6px 16px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: rgba(21, 25, 28, 0.62);
+      background: rgba(20, 24, 27, 0.68);
       color: var(--soft);
       font-size: 11.5px;
       font-weight: 500;
@@ -305,6 +302,7 @@
     <span id="clock" aria-label="Horário atual"></span>
   </footer>
 
+  <script src="./map-data.js"></script>
   <script>
     const FONT = "Outfit", WGT = 500, SIZE = 200, BASE = 220;
     const mCv = document.createElement("canvas");
@@ -388,7 +386,7 @@
       return el;
     }
 
-    // Relógio 24h discreto (reforça "sempre ligado")
+    // Relógio 24h discreto
     const clockEl = document.getElementById("clock");
     function updateClock() {
       const now = new Date();
@@ -398,16 +396,19 @@
     updateClock();
     setInterval(updateClock, 1000);
 
-    // Canvas: Mapa Urbano Abstrato
+    // Mapa vetorial real em estilo Dark Maps
+    const MAP = window.NUNZO_MAP || { w: 2000, h: 1950, v: [], r: [], p: [] };
     const canvas = document.getElementById("map");
     const ctx = canvas.getContext("2d");
+    const staticCanvas = document.createElement("canvas");
+    const sCtx = staticCanvas.getContext("2d");
 
     let W = 0, H = 0, DPR = 1;
-    let nodes = [];
-    let streets = []; // { a, b, avenue, len }
+    let screenVerts = []; // [sx, sy]
+    let mainComp = new Set();
     let adj = [];
-    let waypoints = [];
-    let route = []; // lista de segmentos com distâncias acumuladas
+    let majorSegs = []; // segmentos de tier >= 1 para brilho suave no hover
+    let route = [];
     let routeTotalLen = 0;
     let timers = [];
     let rafId = 0;
@@ -426,15 +427,6 @@
       microRuns: [],
       nextMicroAt: 0
     };
-
-    function seeded(seed) {
-      let s = seed % 2147483647;
-      if (s <= 0) s += 2147483646;
-      return () => {
-        s = (s * 16807) % 2147483647;
-        return (s - 1) / 2147483646;
-      };
-    }
 
     function cubic(p0, p1, p2, p3, t) {
       const u = 1 - t;
@@ -462,189 +454,231 @@
       state.targetR = Math.max(3, rect.width / 2);
     }
 
-    function buildCityMap() {
+    // Constrói o grafo viário uma única vez a partir dos vetores reais
+    function initGraph() {
+      const n = MAP.v.length;
+      adj = Array.from({ length: n }, () => []);
+      for (const [tier, ids] of MAP.r) {
+        const weightFactor = tier >= 3 ? 0.68 : tier === 2 ? 0.78 : tier === 1 ? 0.95 : 1.25;
+        for (let i = 0; i < ids.length - 1; i++) {
+          const a = ids[i], b = ids[i + 1];
+          const dx = MAP.v[a][0] - MAP.v[b][0];
+          const dy = MAP.v[a][1] - MAP.v[b][1];
+          const len = Math.hypot(dx, dy);
+          if (len <= 0) continue;
+          adj[a].push({ to: b, len, cost: len * weightFactor });
+          adj[b].push({ to: a, len, cost: len * weightFactor });
+        }
+      }
+
+      // Maior componente conexa do mapa
+      const seen = new Uint8Array(n);
+      let best = [];
+      for (let i = 0; i < n; i++) {
+        if (seen[i] || adj[i].length === 0) continue;
+        const comp = [i];
+        seen[i] = 1;
+        for (let q = 0; q < comp.length; q++) {
+          for (const e of adj[comp[q]]) {
+            if (!seen[e.to]) {
+              seen[e.to] = 1;
+              comp.push(e.to);
+            }
+          }
+        }
+        if (comp.length > best.length) best = comp;
+      }
+      mainComp = new Set(best);
+    }
+
+    function prepareViewportMap() {
       DPR = Math.min(window.devicePixelRatio || 1, 2);
       W = window.innerWidth;
       H = window.innerHeight;
+
       canvas.width = Math.round(W * DPR);
       canvas.height = Math.round(H * DPR);
       ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-      const rand = seeded(8419);
-      const scale = W < 640 ? 0.72 : 1;
+      staticCanvas.width = Math.round(W * DPR);
+      staticCanvas.height = Math.round(H * DPR);
+      sCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
-      // Gera ruas verticais e horizontais com espaçamento irregular de quarteirões reais
-      const xs = [];
-      let x = -40;
-      while (x < W + 90) {
-        xs.push(x);
-        x += (44 + rand() * 76) * scale;
-      }
+      // Escala estilo mapa urbano (cobre bem desktop e celular sem ficar espremido)
+      const scale = Math.max(W / MAP.w, H / MAP.h, 0.58) * 1.12;
+      const focusX = MAP.w * 0.50;
+      const focusY = MAP.h * 0.52;
+      const ox = W * 0.5 - focusX * scale;
+      const oy = H * 0.5 - focusY * scale;
 
-      const ys = [];
-      let y = -40;
-      while (y < H + 90) {
-        ys.push(y);
-        y += (40 + rand() * 68) * scale;
-      }
+      screenVerts = MAP.v.map(([x, y]) => [ox + x * scale, oy + y * scale]);
 
-      const cols = xs.length;
-      const rows = ys.length;
+      // Pré-renderiza o mapa estático em estilo Google Maps escuro
+      sCtx.fillStyle = "#14181B";
+      sCtx.fillRect(0, 0, W, H);
 
-      // Escolhe algumas avenidas principais contínuas
-      const mainCols = new Set();
-      const mainRows = new Set();
-      mainCols.add(Math.max(1, Math.floor(cols * 0.25)));
-      mainCols.add(Math.max(2, Math.floor(cols * 0.72)));
-      mainRows.add(Math.max(1, Math.floor(rows * 0.3)));
-      mainRows.add(Math.max(2, Math.floor(rows * 0.72)));
-
-      // Leve inclinação natural do traçado urbano (não fica rígido como planilha)
-      const tiltX = (rand() - 0.5) * 0.055;
-      const tiltY = (rand() - 0.5) * 0.045;
-
-      nodes = [];
-      streets = [];
-      adj = [];
-
-      const grid = Array.from({ length: rows }, () => Array(cols).fill(-1));
-
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const isMain = mainCols.has(c) || mainRows.has(r);
-          const jitter = isMain ? 3 : 7.5 * scale;
-          const nx = xs[c] + (ys[r] - H * 0.5) * tiltX + (rand() - 0.5) * jitter;
-          const ny = ys[r] + (xs[c] - W * 0.5) * tiltY + (rand() - 0.5) * jitter;
-
-          const idx = nodes.length;
-          nodes.push({
-            x: nx,
-            y: ny,
-            r,
-            c,
-            main: isMain,
-            lit: 0
-          });
-          adj.push([]);
-          grid[r][c] = idx;
+      // Parques / áreas verdes bem sutis
+      sCtx.fillStyle = "#18211E";
+      sCtx.strokeStyle = "#1C2824";
+      sCtx.lineWidth = 1;
+      for (const poly of MAP.p) {
+        sCtx.beginPath();
+        for (let i = 0; i < poly.length; i++) {
+          const px = ox + poly[i][0] * scale;
+          const py = oy + poly[i][1] * scale;
+          if (i === 0) sCtx.moveTo(px, py);
+          else sCtx.lineTo(px, py);
         }
+        sCtx.closePath();
+        sCtx.fill();
+        sCtx.stroke();
       }
 
-      function addStreet(a, b, avenue) {
-        const len = Math.hypot(nodes[a].x - nodes[b].x, nodes[a].y - nodes[b].y);
-        const id = streets.length;
-        streets.push({ a, b, avenue, len, lit: 0 });
-        adj[a].push({ to: b, id, len });
-        adj[b].push({ to: a, id, len });
-      }
-
-      // Conecta quarteirões, pulando algumas ruas secundárias para parecer cidade real
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const a = grid[r][c];
-          if (c + 1 < cols) {
-            const b = grid[r][c + 1];
-            const ave = mainRows.has(r);
-            if (ave || rand() > 0.22) {
-              addStreet(a, b, ave);
-            }
-          }
-          if (r + 1 < rows) {
-            const b = grid[r + 1][c];
-            const ave = mainCols.has(c);
-            if (ave || rand() > 0.22) {
-              addStreet(a, b, ave);
-            }
+      // Separa vias por hierarquia
+      const byTier = [[], [], [], []];
+      majorSegs = [];
+      for (const [tier, ids] of MAP.r) {
+        const t = Math.min(3, Math.max(0, tier));
+        byTier[t].push(ids);
+        if (t >= 1) {
+          for (let i = 0; i < ids.length - 1; i++) {
+            const a = screenVerts[ids[i]];
+            const b = screenVerts[ids[i + 1]];
+            if (Math.max(a[0], b[0]) < -20 || Math.min(a[0], b[0]) > W + 20) continue;
+            if (Math.max(a[1], b[1]) < -20 || Math.min(a[1], b[1]) > H + 20) continue;
+            majorSegs.push({
+              ax: a[0], ay: a[1],
+              bx: b[0], by: b[1],
+              mx: (a[0] + b[0]) * 0.5,
+              my: (a[1] + b[1]) * 0.5,
+              tier: t
+            });
           }
         }
       }
 
-      // Adiciona uma avenida diagonal sutil atravessando a parte inferior/esquerda -> superior/direita
-      const diagStartR = Math.max(1, Math.floor(rows * 0.72));
-      let dr = diagStartR;
-      let dc = 1;
-      while (dr - 1 >= 1 && dc + 1 < cols - 1) {
-        const a = grid[dr][dc];
-        const b = grid[dr - 1][dc + 1];
-        addStreet(a, b, true);
-        dr -= 1;
-        dc += 1;
+      function strokeTier(paths, color, width) {
+        sCtx.strokeStyle = color;
+        sCtx.lineWidth = width;
+        sCtx.lineCap = "round";
+        sCtx.lineJoin = "round";
+        sCtx.beginPath();
+        for (const ids of paths) {
+          for (let i = 0; i < ids.length; i++) {
+            const p = screenVerts[ids[i]];
+            if (i === 0) sCtx.moveTo(p[0], p[1]);
+            else sCtx.lineTo(p[0], p[1]);
+          }
+        }
+        sCtx.stroke();
       }
+
+      const wScale = clamp01((scale - 0.5) / 0.6) * 0.35 + 0.85;
+
+      // Passagem 1: ruas locais e contornos escuros (casings) para cruzamentos perfeitos
+      strokeTier(byTier[0], "#1D2429", 1.05 * wScale);
+      strokeTier(byTier[1], "#0F1315", 2.8 * wScale);
+      strokeTier(byTier[2], "#0D1113", 4.6 * wScale);
+      strokeTier(byTier[3], "#0A0D0F", 6.4 * wScale);
+
+      // Passagem 2: preenchimento das vias sobre os casings (estilo Google Maps dark)
+      strokeTier(byTier[1], "#242D33", 1.65 * wScale);
+      strokeTier(byTier[2], "#2D3840", 2.85 * wScale);
+      strokeTier(byTier[3], "#36434C", 4.1 * wScale);
+
+      // Vinheta suave nas bordas da tela
+      const edgeGrad = sCtx.createRadialGradient(
+        W * 0.5, H * 0.5, Math.min(W, H) * 0.25,
+        W * 0.5, H * 0.5, Math.hypot(W, H) * 0.55
+      );
+      edgeGrad.addColorStop(0, "rgba(20, 24, 27, 0)");
+      edgeGrad.addColorStop(1, "rgba(12, 15, 17, 0.72)");
+      sCtx.fillStyle = edgeGrad;
+      sCtx.fillRect(0, 0, W, H);
 
       readTarget();
+      buildRoute();
+    }
 
-      // Escolhe 4 pontos visíveis em bairros distintos ao redor do centro (garantindo que todos têm rota conectada)
-      function pickClosestNode(tx, ty, allowedSet) {
-        let best = 0;
+    function buildRoute() {
+      function pickClosestNode(tx, ty) {
+        let best = -1;
         let bestD = Infinity;
-        for (let i = 0; i < nodes.length; i++) {
-          if (allowedSet && !allowedSet.has(i)) continue;
-          const n = nodes[i];
-          if (n.x < 42 || n.x > W - 42 || n.y < 42 || n.y > H - 64) continue;
-          if (adj[i].length < 2) continue;
-          const d = Math.hypot(n.x - tx, n.y - ty);
+        for (const idx of mainComp) {
+          const p = screenVerts[idx];
+          if (p[0] < 44 || p[0] > W - 44 || p[1] < 44 || p[1] > H - 64) continue;
+          if (adj[idx].length < 2) continue;
+          const d = Math.hypot(p[0] - tx, p[1] - ty);
           if (d < bestD) {
             bestD = d;
-            best = i;
+            best = idx;
           }
         }
-        return best;
+        return best >= 0 ? best : [...mainComp][0];
       }
 
-      const p0 = pickClosestNode(W * 0.16, H * 0.28, null);
-      const reachable = new Set([p0]);
-      const queue = [p0];
-      for (let q = 0; q < queue.length; q++) {
-        for (const e of adj[queue[q]]) {
-          if (!reachable.has(e.to)) {
-            reachable.add(e.to);
-            queue.push(e.to);
-          }
-        }
-      }
+      const p0 = pickClosestNode(W * 0.16, H * 0.27);
+      const p1 = pickClosestNode(W * 0.24, H * 0.76);
+      const p2 = pickClosestNode(W * 0.75, H * 0.74);
+      const p3 = pickClosestNode(W * 0.80, H * 0.25);
+      const waypoints = [p0, p1, p2, p3];
 
-      const p1 = pickClosestNode(W * 0.24, H * 0.76, reachable);
-      const p2 = pickClosestNode(W * 0.74, H * 0.73, reachable);
-      const p3 = pickClosestNode(W * 0.80, H * 0.26, reachable);
-      waypoints = [p0, p1, p2, p3];
-
-      // Calcula rota real pelas ruas (Dijkstra simples entre os 4 pontos)
+      // Menor caminho (Dijkstra) com prioridade para avenidas, igual roteamento de mapa
       function shortestPath(start, goal) {
-        const dist = new Float64Array(nodes.length).fill(Infinity);
-        const prevNode = new Int32Array(nodes.length).fill(-1);
-        const prevEdge = new Int32Array(nodes.length).fill(-1);
-        const used = new Uint8Array(nodes.length);
+        const n = MAP.v.length;
+        const dist = new Float64Array(n).fill(Infinity);
+        const prev = new Int32Array(n).fill(-1);
+        const visited = new Uint8Array(n);
+        // Min-heap simples para ~3600 vértices
+        const heap = [[0, start]];
         dist[start] = 0;
 
-        for (let step = 0; step < nodes.length; step++) {
-          let u = -1;
-          let best = Infinity;
-          for (let i = 0; i < nodes.length; i++) {
-            if (!used[i] && dist[i] < best) {
-              best = dist[i];
-              u = i;
+        while (heap.length > 0) {
+          // Extrai mínimo
+          const top = heap[0];
+          const last = heap.pop();
+          if (heap.length > 0) {
+            heap[0] = last;
+            let idx = 0;
+            while (true) {
+              const l = idx * 2 + 1, r = idx * 2 + 2;
+              let sm = idx;
+              if (l < heap.length && heap[l][0] < heap[sm][0]) sm = l;
+              if (r < heap.length && heap[r][0] < heap[sm][0]) sm = r;
+              if (sm === idx) break;
+              [heap[idx], heap[sm]] = [heap[sm], heap[idx]];
+              idx = sm;
             }
           }
-          if (u === -1 || u === goal) break;
-          used[u] = 1;
 
-          for (const edge of adj[u]) {
-            const weight = edge.len * (streets[edge.id].avenue ? 0.85 : 1.0);
-            const nd = dist[u] + weight;
-            if (nd < dist[edge.to]) {
-              dist[edge.to] = nd;
-              prevNode[edge.to] = u;
-              prevEdge[edge.to] = edge.id;
+          const u = top[1];
+          if (visited[u]) continue;
+          visited[u] = 1;
+          if (u === goal) break;
+
+          for (const e of adj[u]) {
+            const nd = dist[u] + e.cost;
+            if (nd < dist[e.to]) {
+              dist[e.to] = nd;
+              prev[e.to] = u;
+              heap.push([nd, e.to]);
+              let idx = heap.length - 1;
+              while (idx > 0) {
+                const par = (idx - 1) >> 1;
+                if (heap[par][0] <= heap[idx][0]) break;
+                [heap[par], heap[idx]] = [heap[idx], heap[par]];
+                idx = par;
+              }
             }
           }
         }
 
         const segs = [];
         let cur = goal;
-        while (cur !== start && prevNode[cur] !== -1) {
-          const from = prevNode[cur];
-          const edgeId = prevEdge[cur];
-          segs.push({ from, to: cur, edgeId, len: Math.hypot(nodes[from].x - nodes[cur].x, nodes[from].y - nodes[cur].y) });
+        while (cur !== start && prev[cur] !== -1) {
+          const from = prev[cur];
+          const a = screenVerts[from], b = screenVerts[cur];
+          segs.push({ from, to: cur, len: Math.hypot(a[0] - b[0], a[1] - b[1]) });
           cur = from;
         }
         segs.reverse();
@@ -653,30 +687,29 @@
 
       route = [];
       routeTotalLen = 0;
-      const wpTriggerDist = [0];
+      const wpDist = [0];
 
-      for (let w = 0; w < waypoints.length - 1; w++) {
-        const segs = shortestPath(waypoints[w], waypoints[w + 1]);
+      for (let i = 0; i < waypoints.length - 1; i++) {
+        const segs = shortestPath(waypoints[i], waypoints[i + 1]);
         for (const seg of segs) {
           seg.startDist = routeTotalLen;
           routeTotalLen += seg.len;
           seg.endDist = routeTotalLen;
           route.push(seg);
         }
-        wpTriggerDist.push(routeTotalLen);
+        wpDist.push(routeTotalLen);
       }
 
       state.beacons = waypoints.map((nodeIdx, idx) => ({
-        nodeIdx,
-        x: nodes[nodeIdx].x,
-        y: nodes[nodeIdx].y,
-        appearAt: idx * 210,
-        triggerDist: wpTriggerDist[idx] || 0,
+        x: screenVerts[nodeIdx][0],
+        y: screenVerts[nodeIdx][1],
+        appearAt: idx * 180,
+        triggerDist: wpDist[idx] || 0,
         answered: false,
         answeredAt: 0
       }));
 
-      state.leapFrom = { x: nodes[p3].x, y: nodes[p3].y };
+      state.leapFrom = { x: screenVerts[p3][0], y: screenVerts[p3][1] };
     }
 
     function drawSoftGlow(x, y, radius, alpha) {
@@ -691,45 +724,36 @@
       ctx.fill();
     }
 
-    function edgeMaskFade(x, y) {
-      // Esmaece o mapa suavemente nas extremidades da tela
-      const dx = Math.abs(x - W * 0.5) / (W * 0.52);
-      const dy = Math.abs(y - H * 0.5) / (H * 0.52);
-      const edge = Math.max(dx, dy);
-      return clamp01(1 - Math.max(0, edge - 0.65) / 0.42);
-    }
-
     function sampleRouteAt(dist) {
-      if (route.length === 0) return { x: state.leapFrom.x, y: state.leapFrom.y, segIdx: -1 };
+      if (route.length === 0) return { x: state.leapFrom.x, y: state.leapFrom.y };
       if (dist <= 0) {
-        const s = route[0];
-        return { x: nodes[s.from].x, y: nodes[s.from].y, segIdx: 0 };
+        const p = screenVerts[route[0].from];
+        return { x: p[0], y: p[1] };
       }
       for (let i = 0; i < route.length; i++) {
         const s = route[i];
         if (dist <= s.endDist) {
           const t = s.len > 0 ? (dist - s.startDist) / s.len : 1;
+          const a = screenVerts[s.from], b = screenVerts[s.to];
           return {
-            x: nodes[s.from].x + (nodes[s.to].x - nodes[s.from].x) * t,
-            y: nodes[s.from].y + (nodes[s.to].y - nodes[s.from].y) * t,
-            segIdx: i,
-            segT: t
+            x: a[0] + (b[0] - a[0]) * t,
+            y: a[1] + (b[1] - a[1]) * t
           };
         }
       }
-      const last = route[route.length - 1];
-      return { x: nodes[last.to].x, y: nodes[last.to].y, segIdx: route.length - 1, segT: 1 };
+      const p = screenVerts[route[route.length - 1].to];
+      return { x: p[0], y: p[1] };
     }
 
     function spawnMicroDispatch(now) {
-      if (nodes.length === 0) return;
-      // Escolhe um nó fora da região central do logo
+      if (mainComp.size === 0) return;
+      const arr = [...mainComp];
       let start = -1;
-      for (let tries = 0; tries < 25; tries++) {
-        const idx = Math.floor(Math.random() * nodes.length);
-        const n = nodes[idx];
-        if (n.x < 60 || n.x > W - 60 || n.y < 60 || n.y > H - 70) continue;
-        if (Math.abs(n.x - W * 0.5) < Math.min(W * 0.3, 290) && Math.abs(n.y - H * 0.47) < 120) continue;
+      for (let tries = 0; tries < 30; tries++) {
+        const idx = arr[Math.floor(Math.random() * arr.length)];
+        const p = screenVerts[idx];
+        if (p[0] < 50 || p[0] > W - 50 || p[1] < 50 || p[1] > H - 65) continue;
+        if (Math.abs(p[0] - W * 0.5) < Math.min(W * 0.3, 290) && Math.abs(p[1] - H * 0.47) < 115) continue;
         if (adj[idx].length >= 2) {
           start = idx;
           break;
@@ -737,71 +761,70 @@
       }
       if (start < 0) return;
 
-      // Caminha 2 a 3 quarteirões aleatórios
-      const hops = 2 + Math.floor(Math.random() * 2);
+      const hops = 4 + Math.floor(Math.random() * 5);
       const pathSegs = [];
-      let cur = start;
-      let prev = -1;
-      let total = 0;
+      let cur = start, prev = -1, total = 0;
       for (let h = 0; h < hops; h++) {
         const choices = adj[cur].filter(e => e.to !== prev);
         if (choices.length === 0) break;
         const pick = choices[Math.floor(Math.random() * choices.length)];
-        pathSegs.push({ from: cur, to: pick.to, len: pick.len, startDist: total, endDist: total + pick.len });
-        total += pick.len;
+        const a = screenVerts[cur], b = screenVerts[pick.to];
+        const sLen = Math.hypot(a[0] - b[0], a[1] - b[1]);
+        pathSegs.push({ from: cur, to: pick.to, len: sLen, startDist: total, endDist: total + sLen });
+        total += sLen;
         prev = cur;
         cur = pick.to;
       }
-      if (pathSegs.length === 0) return;
+      if (pathSegs.length === 0 || total < 30) return;
 
       state.microRuns.push({
         segs: pathSegs,
         total,
         start: now,
-        duration: 1100 + pathSegs.length * 240,
-        targetX: nodes[cur].x,
-        targetY: nodes[cur].y
+        duration: 1200 + Math.min(1200, total * 4.5),
+        targetX: screenVerts[cur][0],
+        targetY: screenVerts[cur][1]
       });
     }
 
     function renderFrame(now) {
       ctx.clearRect(0, 0, W, H);
 
+      // Desenha o mapa real pré-renderizado
+      let mapAlpha = 1;
+      if (state.phase === "mapFade") {
+        mapAlpha = clamp01((now - state.phaseStart) / 360);
+      } else if (state.phase === "settled") {
+        mapAlpha = 0.85;
+      }
+      if (mapAlpha < 0.999) ctx.globalAlpha = mapAlpha;
+      ctx.drawImage(staticCanvas, 0, 0, W, H);
+      ctx.globalAlpha = 1;
+
       if (pointer.active) {
         pointer.x += (pointer.tx - pointer.x) * 0.16;
         pointer.y += (pointer.ty - pointer.y) * 0.16;
       }
 
-      // Opacidade do mapa (um pouco mais presente na abertura, mais calmo depois que o logo assenta)
-      let mapVis = 1;
-      if (state.phase === "mapFade") {
-        mapVis = clamp01((now - state.phaseStart) / 360);
-      } else if (state.phase === "settled") {
-        mapVis = 0.72;
-      }
-
-      // Avança estado do ponto viajante
       let traveler = null;
       let activeDist = -1;
 
-      if (state.phase === "mapFade") {
-        if (now - state.phaseStart >= 360) {
-          state.phase = "streetRun";
-          state.phaseStart = now;
-        }
+      if (state.phase === "mapFade" && now - state.phaseStart >= 360) {
+        state.phase = "streetRun";
+        state.phaseStart = now;
       }
 
       if (state.phase === "streetRun") {
-        const runMs = 1950;
+        const runMs = 2150;
         const raw = clamp01((now - state.phaseStart) / runMs);
         const e = easeInOutCubic(raw);
         activeDist = e * routeTotalLen;
 
         const pos = sampleRouteAt(activeDist);
-        traveler = { x: pos.x, y: pos.y, r: Math.max(4.5, state.targetR * 0.82), onMap: true };
+        traveler = { x: pos.x, y: pos.y, r: Math.max(4.5, state.targetR * 0.82) };
 
         state.trail.push({ x: pos.x, y: pos.y });
-        if (state.trail.length > 34) state.trail.shift();
+        if (state.trail.length > 36) state.trail.shift();
 
         for (const b of state.beacons) {
           if (!b.answered && activeDist >= b.triggerDist - 8) {
@@ -819,8 +842,7 @@
         const raw = clamp01((now - state.phaseStart) / leapMs);
         const e = easeOutCubic(raw);
 
-        const p0x = state.leapFrom.x;
-        const p0y = state.leapFrom.y;
+        const p0x = state.leapFrom.x, p0y = state.leapFrom.y;
         const p1x = p0x + (state.targetX - p0x) * 0.35;
         const p1y = Math.min(p0y, state.targetY) - 85;
         const p2x = state.targetX + (p0x - state.targetX) * 0.18;
@@ -828,9 +850,10 @@
 
         const tx = cubic(p0x, p1x, p2x, state.targetX, e);
         const ty = cubic(p0y, p1y, p2y, state.targetY, e);
-        const rNow = Math.max(4.5, state.targetR * 0.82) + (state.targetR - Math.max(4.5, state.targetR * 0.82)) * e;
+        const rStart = Math.max(4.5, state.targetR * 0.82);
+        const rNow = rStart + (state.targetR - rStart) * e;
 
-        traveler = { x: tx, y: ty, r: rNow, onMap: false };
+        traveler = { x: tx, y: ty, r: rNow };
         state.trail.push({ x: tx, y: ty });
         if (state.trail.length > 26) state.trail.shift();
 
@@ -839,39 +862,24 @@
         }
       }
 
-      // Desenha ruas da cidade
-      ctx.lineCap = "round";
-      for (const s of streets) {
-        const a = nodes[s.a];
-        const b = nodes[s.b];
-        const mx = (a.x + b.x) * 0.5;
-        const my = (a.y + b.y) * 0.5;
-        const fade = edgeMaskFade(mx, my);
-        if (fade <= 0.02) continue;
-
-        let alpha = (s.avenue ? 0.095 : 0.045) * mapVis * fade;
-        let green = 0;
-
-        if (state.phase === "settled" && pointer.active) {
-          const dp = Math.hypot(mx - pointer.x, my - pointer.y);
-          if (dp < 155) {
-            green = (1 - dp / 155) * 0.24;
+      // Ilumina avenidas próximas ao ponteiro após assentar
+      if (state.phase === "settled" && pointer.active) {
+        ctx.lineCap = "round";
+        for (const seg of majorSegs) {
+          const dp = Math.hypot(seg.mx - pointer.x, seg.my - pointer.y);
+          if (dp < 145) {
+            const a = (1 - dp / 145) * 0.22;
+            ctx.strokeStyle = `rgba(43, 212, 107, ${a.toFixed(3)})`;
+            ctx.lineWidth = seg.tier >= 3 ? 3.2 : seg.tier === 2 ? 2.2 : 1.4;
+            ctx.beginPath();
+            ctx.moveTo(seg.ax, seg.ay);
+            ctx.lineTo(seg.bx, seg.by);
+            ctx.stroke();
           }
         }
-
-        ctx.lineWidth = s.avenue ? 1.35 : 0.85;
-        if (green > 0.01) {
-          ctx.strokeStyle = `rgba(43, 212, 107, ${(alpha + green).toFixed(3)})`;
-        } else {
-          ctx.strokeStyle = `rgba(215, 224, 227, ${alpha.toFixed(3)})`;
-        }
-        ctx.beginPath();
-        ctx.moveTo(a.x, a.y);
-        ctx.lineTo(b.x, b.y);
-        ctx.stroke();
       }
 
-      // Desenha a rota iluminada já percorrida pelas ruas
+      // Rota percorrida acesa em verde pelas ruas reais
       if (state.phase === "streetRun" || state.phase === "leap" || state.phase === "settled") {
         const routeFade = state.phase === "settled"
           ? Math.max(0, 1 - (now - state.phaseStart) / 2600)
@@ -880,54 +888,58 @@
         if (routeFade > 0.01) {
           ctx.lineCap = "round";
           ctx.lineJoin = "round";
+          ctx.strokeStyle = `rgba(43, 212, 107, ${(0.42 * routeFade).toFixed(3)})`;
+          ctx.lineWidth = 2.4;
+          ctx.beginPath();
+
+          let startedPath = false;
           for (const seg of route) {
             const limit = state.phase === "streetRun" ? activeDist : routeTotalLen;
             if (limit <= seg.startDist) break;
 
             const frac = limit >= seg.endDist ? 1 : (limit - seg.startDist) / seg.len;
-            const ax = nodes[seg.from].x;
-            const ay = nodes[seg.from].y;
-            const bx = ax + (nodes[seg.to].x - ax) * frac;
-            const by = ay + (nodes[seg.to].y - ay) * frac;
+            const a = screenVerts[seg.from];
+            const b = screenVerts[seg.to];
+            const bx = a[0] + (b[0] - a[0]) * frac;
+            const by = a[1] + (b[1] - a[1]) * frac;
 
-            ctx.strokeStyle = `rgba(43, 212, 107, ${(0.36 * routeFade).toFixed(3)})`;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(ax, ay);
+            if (!startedPath) {
+              ctx.moveTo(a[0], a[1]);
+              startedPath = true;
+            }
             ctx.lineTo(bx, by);
-            ctx.stroke();
           }
+          ctx.stroke();
         }
       }
 
-      // Desenha os 4 sinais urbanos (chamados na cidade -> respondidos em verde)
-      const beaconOverallFade = state.phase === "settled"
+      // 4 sinais pela cidade
+      const beaconFade = state.phase === "settled"
         ? Math.max(0, 1 - (now - state.phaseStart) / 2800)
         : 1;
 
-      if (beaconOverallFade > 0.01) {
+      if (beaconFade > 0.01) {
         const elapsedSinceStart = state.phase === "mapFade" ? now - state.phaseStart : 9999;
         for (const b of state.beacons) {
           if (state.phase === "mapFade" && elapsedSinceStart < b.appearAt) continue;
 
           if (!b.answered) {
             const pulse = 0.55 + 0.45 * Math.sin(now * 0.008 + b.x);
-            // Ponto aguardando resposta (branco suave)
-            ctx.fillStyle = `rgba(255, 255, 255, ${(0.72 * beaconOverallFade).toFixed(3)})`;
+            ctx.fillStyle = `rgba(255, 255, 255, ${(0.76 * beaconFade).toFixed(3)})`;
             ctx.beginPath();
             ctx.arc(b.x, b.y, 3.2, 0, Math.PI * 2);
             ctx.fill();
 
-            ctx.strokeStyle = `rgba(255, 255, 255, ${(0.28 * pulse * beaconOverallFade).toFixed(3)})`;
+            ctx.strokeStyle = `rgba(255, 255, 255, ${(0.28 * pulse * beaconFade).toFixed(3)})`;
             ctx.lineWidth = 1;
             ctx.beginPath();
             ctx.arc(b.x, b.y, 5 + pulse * 5.5, 0, Math.PI * 2);
             ctx.stroke();
           } else {
             const age = (now - b.answeredAt) / 900;
-            const fade = Math.max(0.25, 1 - age * 0.45) * beaconOverallFade;
-            drawSoftGlow(b.x, b.y, 20, fade * 0.7);
-            ctx.fillStyle = `rgba(43, 212, 107, ${(0.95 * beaconOverallFade).toFixed(3)})`;
+            const fade = Math.max(0.25, 1 - age * 0.45) * beaconFade;
+            drawSoftGlow(b.x, b.y, 20, fade * 0.72);
+            ctx.fillStyle = `rgba(43, 212, 107, ${(0.95 * beaconFade).toFixed(3)})`;
             ctx.beginPath();
             ctx.arc(b.x, b.y, 3.4, 0, Math.PI * 2);
             ctx.fill();
@@ -935,10 +947,10 @@
         }
       }
 
-      // Micro-despachos ocasionais na cidade depois que tudo assentou ("sempre ligado")
+      // Micro-despachos pelas ruas depois de assentado
       if (state.phase === "settled" && !reducedMotion && now >= state.nextMicroAt) {
         spawnMicroDispatch(now);
-        state.nextMicroAt = now + 2400 + Math.random() * 2400;
+        state.nextMicroAt = now + 2200 + Math.random() * 2400;
       }
 
       state.microRuns = state.microRuns.filter(run => {
@@ -948,39 +960,37 @@
         const env = p < 0.15 ? p / 0.15 : p > 0.78 ? (1 - p) / 0.22 : 1;
         const dist = easeInOutCubic(p) * run.total;
 
-        // Trilha verde curta
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = `rgba(43, 212, 107, ${(0.32 * env).toFixed(3)})`;
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        let moved = false;
+        let headX = 0, headY = 0;
+
         for (const seg of run.segs) {
           if (dist <= seg.startDist) break;
           const f = dist >= seg.endDist ? 1 : (dist - seg.startDist) / seg.len;
-          const ax = nodes[seg.from].x;
-          const ay = nodes[seg.from].y;
-          const bx = ax + (nodes[seg.to].x - ax) * f;
-          const by = ay + (nodes[seg.to].y - ay) * f;
-          ctx.strokeStyle = `rgba(43, 212, 107, ${(0.28 * env).toFixed(3)})`;
-          ctx.lineWidth = 1.6;
-          ctx.beginPath();
-          ctx.moveTo(ax, ay);
-          ctx.lineTo(bx, by);
-          ctx.stroke();
-        }
-
-        // Cabeça do pulso correndo na rua
-        for (const seg of run.segs) {
-          if (dist <= seg.endDist) {
-            const f = seg.len > 0 ? (dist - seg.startDist) / seg.len : 1;
-            const hx = nodes[seg.from].x + (nodes[seg.to].x - nodes[seg.from].x) * f;
-            const hy = nodes[seg.from].y + (nodes[seg.to].y - nodes[seg.from].y) * f;
-            drawSoftGlow(hx, hy, 14, env * 0.75);
-            ctx.fillStyle = `rgba(43, 212, 107, ${(0.9 * env).toFixed(3)})`;
-            ctx.beginPath();
-            ctx.arc(hx, hy, 2.2, 0, Math.PI * 2);
-            ctx.fill();
-            break;
+          const a = screenVerts[seg.from], b = screenVerts[seg.to];
+          headX = a[0] + (b[0] - a[0]) * f;
+          headY = a[1] + (b[1] - a[1]) * f;
+          if (!moved) {
+            ctx.moveTo(a[0], a[1]);
+            moved = true;
           }
+          ctx.lineTo(headX, headY);
+        }
+        ctx.stroke();
+
+        if (moved) {
+          drawSoftGlow(headX, headY, 14, env * 0.78);
+          ctx.fillStyle = `rgba(43, 212, 107, ${(0.92 * env).toFixed(3)})`;
+          ctx.beginPath();
+          ctx.arc(headX, headY, 2.2, 0, Math.PI * 2);
+          ctx.fill();
         }
 
-        // Ponto de destino aguardando
-        ctx.fillStyle = `rgba(255, 255, 255, ${(0.45 * env).toFixed(3)})`;
+        ctx.fillStyle = `rgba(255, 255, 255, ${(0.48 * env).toFixed(3)})`;
         ctx.beginPath();
         ctx.arc(run.targetX, run.targetY, 2.1, 0, Math.PI * 2);
         ctx.fill();
@@ -988,14 +998,15 @@
         return true;
       });
 
-      // Ponto verde principal viajando pela cidade e subindo para o "O"
+      // Ponto verde principal viajando
       if (traveler) {
         if (state.trail.length > 2) {
+          ctx.lineCap = "round";
           for (let i = 1; i < state.trail.length; i++) {
             const frac = i / state.trail.length;
             const prev = state.trail[i - 1];
             const curr = state.trail[i];
-            ctx.strokeStyle = `rgba(43, 212, 107, ${(frac * frac * 0.32).toFixed(3)})`;
+            ctx.strokeStyle = `rgba(43, 212, 107, ${(frac * frac * 0.34).toFixed(3)})`;
             ctx.lineWidth = Math.max(1, traveler.r * 1.15 * frac);
             ctx.beginPath();
             ctx.moveTo(prev.x, prev.y);
@@ -1041,10 +1052,11 @@
       if (!isReplay) {
         const m = measure();
         buildWordmark(m);
+        initGraph();
       }
 
       document.body.classList.add("ready");
-      buildCityMap();
+      prepareViewportMap();
 
       if (reducedMotion) {
         state.phase = "settled";
@@ -1080,7 +1092,7 @@
 
     window.addEventListener("resize", () => {
       if (state.phase === "idle") return;
-      buildCityMap();
+      prepareViewportMap();
     });
 
     document.querySelector("[data-mk]").addEventListener("click", () => {
