@@ -176,6 +176,12 @@
       animation: bloom-blink 2.2s ease-in-out infinite;
     }
 
+    body.dot-away .mk .dot-core,
+    body.dot-away .mk .dot-bloom {
+      opacity: 0 !important;
+      animation: none !important;
+    }
+
     .badge {
       display: inline-flex;
       align-items: center;
@@ -955,30 +961,24 @@
     }
 
     function spawnUserDispatch(clickX, clickY) {
+      readTarget();
       const targetNode = pickClosestNode(clickX, clickY, false);
       const tx = screenVerts[targetNode][0];
       const ty = screenVerts[targetNode][1];
 
-      // Escolhe um ponto de partida numa avenida a ~200-420px de distância
-      const pool = avenueNodes.length > 0 ? avenueNodes : mainList;
-      let originNode = -1;
-      let bestScore = Infinity;
-      const desired = Math.min(340, Math.max(190, Math.min(W, H) * 0.34));
+      // Se a bolinha já está em voo, parte da posição atual dela; caso contrário, sai direto do "O"
+      const activeMover = state.dispatches.find(d => !d.returned);
+      const fromX = activeMover ? activeMover.curX : state.targetX;
+      const fromY = activeMover ? activeMover.curY : state.targetY;
 
-      for (let t = 0; t < 28; t++) {
-        const cand = pool[Math.floor(Math.random() * pool.length)];
-        if (cand === targetNode) continue;
-        const p = screenVerts[cand];
-        if (p[0] < 0 || p[0] > W || p[1] < 0 || p[1] > H) continue;
-        const d = Math.hypot(p[0] - tx, p[1] - ty);
-        if (d < 120) continue;
-        const score = Math.abs(d - desired);
-        if (score < bestScore) {
-          bestScore = score;
-          originNode = cand;
-        }
+      // Escolhe a entrada na via no caminho entre a origem e o ponto clicado
+      const entryRatio = Math.hypot(tx - fromX, ty - fromY) > 220 ? 0.36 : 0.25;
+      const midX = fromX + (tx - fromX) * entryRatio;
+      const midY = fromY + (ty - fromY) * entryRatio;
+      let originNode = pickClosestNode(midX, midY, false);
+      if (originNode === targetNode && adj[targetNode].length > 0) {
+        originNode = adj[targetNode][0].to;
       }
-      if (originNode < 0) originNode = pickClosestNode(tx + 220, ty - 160, false);
 
       const segs = shortestPath(originNode, targetNode);
       if (segs.length === 0) return;
@@ -990,27 +990,46 @@
         s.endDist = total;
       }
 
+      const originX = screenVerts[originNode][0];
+      const originY = screenVerts[originNode][1];
       const now = performance.now();
       const dObj = new Date();
       const timeLabel = `${String(dObj.getHours()).padStart(2, "0")}:${String(dObj.getMinutes()).padStart(2, "0")}`;
-      const duration = Math.max(320, Math.min(680, 240 + total * 0.72));
+
+      const outDist = Math.hypot(originX - fromX, originY - fromY);
+      const outMs = Math.max(180, Math.min(340, 140 + outDist * 0.65));
+      const streetMs = Math.max(260, Math.min(620, 180 + total * 0.72));
+      const retDist = Math.hypot(state.targetX - tx, state.targetY - ty);
+      const retMs = Math.max(220, Math.min(420, 160 + retDist * 0.45));
 
       if (!document.body.classList.contains("interacted")) {
         document.body.classList.add("interacted");
       }
+      document.body.classList.add("dot-away");
 
       state.dispatches.push({
         segs,
         total,
         start: now,
-        duration,
+        fromX,
+        fromY,
+        originX,
+        originY,
+        outMs,
+        streetMs,
+        retMs,
         targetX: tx,
         targetY: ty,
+        curX: fromX,
+        curY: fromY,
+        trail: [],
         timeLabel,
         barA: 22 + Math.floor(Math.random() * 10),
         barB: 14 + Math.floor(Math.random() * 12),
         answered: false,
-        answeredAt: 0
+        answeredAt: 0,
+        returned: false,
+        returnedAt: 0
       });
     }
 
@@ -1214,59 +1233,108 @@
     }
 
     function renderDispatches(now) {
+      let anyInFlight = false;
+
       state.dispatches = state.dispatches.filter(d => {
         const elapsed = now - d.start;
-        if (d.answered && now - d.answeredAt > 1450) return false;
-
-        const prog = clamp01(elapsed / d.duration);
-        const e = easeInOutCubic(prog);
-        const dist = e * d.total;
+        if (d.returned && now - d.returnedAt > 950) return false;
 
         let globalFade = 1;
-        if (d.answered) {
-          const post = (now - d.answeredAt) / 1450;
-          if (post > 0.35) {
-            globalFade = 1 - (post - 0.35) / 0.65;
-          }
+        if (d.returned) {
+          globalFade = Math.max(0, 1 - (now - d.returnedAt) / 950);
         }
 
-        // Desenha trajeto percorrido pelas ruas reais
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.strokeStyle = `rgba(43, 212, 107, ${(0.62 * globalFade).toFixed(3)})`;
-        ctx.lineWidth = 2.4;
-        ctx.beginPath();
+        const tStreetStart = d.outMs;
+        const tStreetEnd = d.outMs + d.streetMs;
+        const tReturnStart = tStreetEnd + 65; // breve pausa no atendimento antes de voltar
+        const tReturnEnd = tReturnStart + d.retMs;
 
-        let moved = false;
-        let headX = d.targetX, headY = d.targetY;
-        for (const seg of d.segs) {
-          if (dist <= seg.startDist) break;
-          const f = dist >= seg.endDist ? 1 : (dist - seg.startDist) / seg.len;
-          const a = screenVerts[seg.from], b = screenVerts[seg.to];
-          headX = a[0] + (b[0] - a[0]) * f;
-          headY = a[1] + (b[1] - a[1]) * f;
-          if (!moved) {
-            ctx.moveTo(a[0], a[1]);
-            moved = true;
-          }
-          ctx.lineTo(headX, headY);
+        // Progresso na rua
+        let streetDist = 0;
+        if (elapsed >= tStreetStart) {
+          const sp = clamp01((elapsed - tStreetStart) / d.streetMs);
+          streetDist = easeInOutCubic(sp) * d.total;
         }
-        ctx.stroke();
 
-        // Bolinha verde correndo até o chamado
-        if (!d.answered && moved) {
-          drawSoftGlow(headX, headY, 20, 0.95);
-          ctx.fillStyle = "#2BD46B";
+        // Desenha rota verde percorrida pelas ruas
+        if (elapsed >= tStreetStart && globalFade > 0.01) {
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.strokeStyle = `rgba(43, 212, 107, ${(0.58 * globalFade).toFixed(3)})`;
+          ctx.lineWidth = 2.4;
           ctx.beginPath();
-          ctx.arc(headX, headY, 3.6, 0, Math.PI * 2);
-          ctx.fill();
+
+          let moved = false;
+          for (const seg of d.segs) {
+            if (streetDist <= seg.startDist) break;
+            const f = streetDist >= seg.endDist ? 1 : (streetDist - seg.startDist) / seg.len;
+            const a = screenVerts[seg.from], b = screenVerts[seg.to];
+            const hx = a[0] + (b[0] - a[0]) * f;
+            const hy = a[1] + (b[1] - a[1]) * f;
+            if (!moved) {
+              ctx.moveTo(a[0], a[1]);
+              moved = true;
+            }
+            ctx.lineTo(hx, hy);
+          }
+          ctx.stroke();
         }
 
-        if (!d.answered && prog >= 1) {
+        // Marca o chamado como respondido assim que chega no destino
+        if (!d.answered && elapsed >= tStreetEnd) {
           d.answered = true;
           d.answeredAt = now;
         }
 
+        // Calcula posição atual da bolinha verde (saindo do "O" -> rua -> voltando pro "O")
+        let dotVisible = true;
+        let dotR = Math.max(4, state.targetR * 0.78);
+
+        if (elapsed < tStreetStart) {
+          const p = easeOutCubic(clamp01(elapsed / d.outMs));
+          const c1x = d.fromX + (d.originX - d.fromX) * 0.35;
+          const c1y = Math.min(d.fromY, d.originY) - 42;
+          const c2x = d.originX - (d.originX - d.fromX) * 0.2;
+          const c2y = d.originY - 30;
+          d.curX = cubic(d.fromX, c1x, c2x, d.originX, p);
+          d.curY = cubic(d.fromY, c1y, c2y, d.originY, p);
+          dotR = state.targetR + (Math.max(4, state.targetR * 0.78) - state.targetR) * p;
+          anyInFlight = true;
+        } else if (elapsed <= tStreetEnd) {
+          for (const seg of d.segs) {
+            if (streetDist <= seg.endDist) {
+              const f = seg.len > 0 ? (streetDist - seg.startDist) / seg.len : 1;
+              const a = screenVerts[seg.from], b = screenVerts[seg.to];
+              d.curX = a[0] + (b[0] - a[0]) * f;
+              d.curY = a[1] + (b[1] - a[1]) * f;
+              break;
+            }
+          }
+          anyInFlight = true;
+        } else if (elapsed < tReturnStart) {
+          d.curX = d.targetX;
+          d.curY = d.targetY;
+          anyInFlight = true;
+        } else if (elapsed < tReturnEnd) {
+          const p = easeInOutCubic(clamp01((elapsed - tReturnStart) / d.retMs));
+          const c1x = d.targetX + (state.targetX - d.targetX) * 0.3;
+          const c1y = Math.min(d.targetY, state.targetY) - 65;
+          const c2x = state.targetX - (state.targetX - d.targetX) * 0.18;
+          const c2y = state.targetY - 50;
+          d.curX = cubic(d.targetX, c1x, c2x, state.targetX, p);
+          d.curY = cubic(d.targetY, c1y, c2y, state.targetY, p);
+          const rStreet = Math.max(4, state.targetR * 0.78);
+          dotR = rStreet + (state.targetR - rStreet) * p;
+          anyInFlight = true;
+        } else {
+          if (!d.returned) {
+            d.returned = true;
+            d.returnedAt = now;
+          }
+          dotVisible = false;
+        }
+
+        // Cartão do chamado
         const enterProg = clamp01(elapsed / 160);
         drawCallCard(
           {
@@ -1283,8 +1351,39 @@
           enterProg
         );
 
+        // Desenha a bolinha verde viajando + rastro suave
+        if (dotVisible) {
+          d.trail.push({ x: d.curX, y: d.curY });
+          if (d.trail.length > 18) d.trail.shift();
+
+          if (d.trail.length > 2) {
+            ctx.lineCap = "round";
+            for (let i = 1; i < d.trail.length; i++) {
+              const frac = i / d.trail.length;
+              const prev = d.trail[i - 1];
+              const curr = d.trail[i];
+              ctx.strokeStyle = `rgba(43, 212, 107, ${(frac * frac * 0.32).toFixed(3)})`;
+              ctx.lineWidth = Math.max(1, dotR * 1.1 * frac);
+              ctx.beginPath();
+              ctx.moveTo(prev.x, prev.y);
+              ctx.lineTo(curr.x, curr.y);
+              ctx.stroke();
+            }
+          }
+
+          drawSoftGlow(d.curX, d.curY, dotR * 5.0, 1);
+          ctx.fillStyle = "#2BD46B";
+          ctx.beginPath();
+          ctx.arc(d.curX, d.curY, dotR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
         return true;
       });
+
+      if (!anyInFlight && document.body.classList.contains("dot-away")) {
+        document.body.classList.remove("dot-away");
+      }
     }
 
     function renderFrame(now) {
@@ -1488,7 +1587,7 @@
     function startExperience(isReplay) {
       clearTimers();
       document.body.classList.add("resetting");
-      document.body.classList.remove("dot-landed", "ring-in", "word-in", "settled", "hint-on");
+      document.body.classList.remove("dot-landed", "ring-in", "word-in", "settled", "hint-on", "dot-away");
       void document.body.offsetWidth;
       document.body.classList.remove("resetting");
 
