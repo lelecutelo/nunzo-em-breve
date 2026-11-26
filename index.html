@@ -17,12 +17,13 @@
   <style>
     :root {
       --ink: #15191C;
+      --ink-deep: #0E1214;
       --ink-hi: #1A2024;
       --dot: #2BD46B;
       --soft: #A3ABAE;
       --muted: #6C767C;
       --paper: #FFFFFF;
-      --line: rgba(255, 255, 255, 0.1);
+      --line: rgba(255, 255, 255, 0.11);
       --font: "Outfit", ui-sans-serif, system-ui, -apple-system, sans-serif;
     }
 
@@ -36,7 +37,8 @@
     }
 
     body {
-      background: radial-gradient(circle at 50% 44%, var(--ink-hi) 0%, var(--ink) 68%);
+      position: relative;
+      background: radial-gradient(circle at 50% 47%, var(--ink-hi) 0%, var(--ink) 56%, var(--ink-deep) 100%);
       background-color: var(--ink);
       color: var(--paper);
       font-family: var(--font);
@@ -45,8 +47,38 @@
       display: grid;
       grid-template-rows: 1fr auto;
       min-height: 100dvh;
-      overflow-x: hidden;
+      overflow: hidden;
       padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+    }
+
+    #map {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Sutil proteção de contraste atrás do logo após assentar */
+    .vignette {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background: radial-gradient(ellipse 46% 32% at 50% 47%, rgba(21, 25, 28, 0.72) 0%, rgba(21, 25, 28, 0.25) 55%, rgba(21, 25, 28, 0) 100%);
+      opacity: 0;
+      transition: opacity 0.9s ease;
+    }
+
+    body.ring-in .vignette {
+      opacity: 1;
+    }
+
+    main,
+    footer {
+      position: relative;
+      z-index: 1;
     }
 
     main {
@@ -67,29 +99,11 @@
       opacity: 1;
     }
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      margin-top: 6px;
-      padding: 6px 16px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      background: rgba(255, 255, 255, 0.03);
-      color: var(--soft);
-      font-size: 11.5px;
-      font-weight: 500;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      opacity: 0;
-      transform: translateY(8px);
-      transition: opacity 0.55s ease 0.12s, transform 0.65s cubic-bezier(0.16, 1, 0.3, 1) 0.12s;
-    }
-
     .mk {
       margin: 0;
       font-family: var(--font);
       font-weight: 500;
-      font-size: clamp(64px, 15vw, 144px);
+      font-size: clamp(64px, 14.5vw, 144px);
       letter-spacing: -0.025em;
       line-height: 1;
       white-space: nowrap;
@@ -97,6 +111,7 @@
       align-items: baseline;
       color: var(--paper);
       user-select: none;
+      cursor: pointer;
     }
 
     .ch-mask {
@@ -114,7 +129,7 @@
       display: inline-block;
       transform: translateY(112%);
       opacity: 0;
-      transition: transform 0.56s cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0ms),
+      transition: transform 0.58s cubic-bezier(0.16, 1, 0.3, 1) var(--d, 0ms),
                   opacity 0.25s ease var(--d, 0ms);
     }
 
@@ -131,90 +146,114 @@
     .mk .ring-arc {
       stroke-dasharray: 101;
       stroke-dashoffset: 101;
-      transition: stroke-dashoffset 0.58s cubic-bezier(0.22, 1, 0.36, 1);
+      transition: stroke-dashoffset 0.6s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     body.ring-in .mk .ring-arc {
       stroke-dashoffset: 0;
     }
 
-    .mk .dot-halo {
-      opacity: 0;
-      transform-box: fill-box;
-      transform-origin: center;
-    }
-
-    body.landed .mk .dot-halo {
-      animation: halo-ping 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-    }
-
-    .mk .dot-glow {
+    .mk .dot-core,
+    .mk .dot-bloom {
       opacity: 0;
     }
 
-    body.settled .mk .dot-glow {
-      animation: dot-glow-blink 1.7s ease-in-out infinite;
+    body.dot-landed .mk .dot-core,
+    body.dot-landed .mk .dot-bloom {
+      opacity: 1;
     }
 
     body.settled .mk .dot-core {
-      animation: dot-blink 1.7s ease-in-out infinite;
+      animation: dot-blink 2.2s ease-in-out infinite;
+    }
+
+    body.settled .mk .dot-bloom {
+      animation: bloom-blink 2.2s ease-in-out infinite;
     }
 
     .tagline {
       margin: 2px 0 0;
       color: var(--soft);
-      font-size: clamp(17px, 2.5vw, 22px);
+      font-size: clamp(17px, 2.4vw, 22px);
       font-weight: 400;
       letter-spacing: -0.005em;
       opacity: 0;
       transform: translateY(10px);
-      transition: opacity 0.55s ease, transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: opacity 0.6s ease, transform 0.68s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      margin-top: 6px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(21, 25, 28, 0.62);
+      color: var(--soft);
+      font-size: 11.5px;
+      font-weight: 500;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.6s ease 0.14s, transform 0.68s cubic-bezier(0.16, 1, 0.3, 1) 0.14s;
     }
 
     footer {
-      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
       color: var(--muted);
       font-size: 13px;
       font-weight: 400;
       letter-spacing: 0.02em;
       padding-top: 16px;
       opacity: 0;
-      transition: opacity 0.6s ease 0.1s;
+      transition: opacity 0.65s ease 0.2s;
     }
 
-    body.settled .badge,
+    .sep {
+      opacity: 0.35;
+    }
+
+    #clock {
+      font-variant-numeric: tabular-nums;
+      opacity: 0.78;
+    }
+
     body.settled .tagline,
+    body.settled .badge,
     body.settled footer {
       opacity: 1;
       transform: translateY(0);
     }
 
-    @keyframes halo-ping {
-      0% {
-        opacity: 0.7;
-        transform: scale(1);
-      }
-      100% {
-        opacity: 0;
-        transform: scale(3.4);
-      }
+    body.resetting .ch,
+    body.resetting .mk .ring-arc,
+    body.resetting .tagline,
+    body.resetting .badge,
+    body.resetting footer,
+    body.resetting .vignette {
+      transition: none !important;
     }
 
     @keyframes dot-blink {
-      0%, 52%, 100% {
+      0%, 38%, 100% {
         opacity: 1;
       }
-      72% {
-        opacity: 0.15;
+      62% {
+        opacity: 0.26;
       }
     }
 
-    @keyframes dot-glow-blink {
-      0%, 52%, 100% {
-        opacity: 0.22;
+    @keyframes bloom-blink {
+      0%, 38%, 100% {
+        opacity: 1;
       }
-      72% {
-        opacity: 0.02;
+      62% {
+        opacity: 0.08;
       }
     }
 
@@ -223,61 +262,64 @@
       .ch,
       .mk .ring-arc,
       .tagline,
-      footer {
+      footer,
+      .vignette {
         transition: none !important;
       }
       .stack,
       .badge,
       .tagline,
-      footer {
+      footer,
+      .vignette,
+      .ch,
+      .mk .dot-core,
+      .mk .dot-bloom {
         opacity: 1 !important;
         transform: none !important;
-      }
-      .ch {
-        transform: none !important;
-        opacity: 1 !important;
       }
       .mk .ring-arc {
         stroke-dashoffset: 0 !important;
       }
-      .mk .dot-glow {
-        animation: none !important;
-        opacity: 0.16 !important;
-      }
       .mk .dot-core,
-      .mk .dot-halo {
+      .mk .dot-bloom {
         animation: none !important;
       }
     }
   </style>
 </head>
 <body>
+  <canvas id="map" aria-hidden="true"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+
   <main>
     <div class="stack">
-      <h1 class="mk" data-mk aria-label="nunzo"></h1>
+      <h1 class="mk" data-mk aria-label="nunzo" title="Clique para rever a animação"></h1>
       <p class="tagline">Ninguém fica sem resposta.</p>
       <div class="badge">Em breve</div>
     </div>
   </main>
 
-  <footer>nunzo.com.br</footer>
+  <footer>
+    <span>nunzo.com.br</span>
+    <span class="sep" aria-hidden="true">·</span>
+    <span id="clock" aria-label="Horário atual"></span>
+  </footer>
 
   <script>
     const FONT = "Outfit", WGT = 500, SIZE = 200, BASE = 220;
-    const cv = document.createElement("canvas");
-    cv.width = 520;
-    cv.height = 320;
-    const cx = cv.getContext("2d", { willReadFrequently: true });
+    const mCv = document.createElement("canvas");
+    mCv.width = 520;
+    mCv.height = 320;
+    const mCx = mCv.getContext("2d", { willReadFrequently: true });
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let started = false;
 
     function measure() {
-      cx.clearRect(0, 0, cv.width, cv.height);
-      cx.font = `${WGT} ${SIZE}px "${FONT}"`;
-      cx.fillText("o", 60, BASE);
-      const adv = cx.measureText("o").width;
-      const d = cx.getImageData(0, 0, cv.width, cv.height).data;
-      const W = cv.width, H = cv.height;
+      mCx.clearRect(0, 0, mCv.width, mCv.height);
+      mCx.font = `${WGT} ${SIZE}px "${FONT}"`;
+      mCx.fillText("o", 60, BASE);
+      const adv = mCx.measureText("o").width;
+      const d = mCx.getImageData(0, 0, mCv.width, mCv.height).data;
+      const W = mCv.width, H = mCv.height;
       let l = W, r = 0, t = H, b = 0;
       for (let y = 0; y < H; y++) {
         for (let x = 0; x < W; x++) {
@@ -328,16 +370,70 @@
 
       const svg =
         `<svg viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}" style="${st}" aria-hidden="true">` +
+          `<defs>` +
+            `<radialGradient id="led-bloom" cx="50%" cy="50%" r="50%">` +
+              `<stop offset="0%" stop-color="#2BD46B" stop-opacity="0.54"/>` +
+              `<stop offset="22%" stop-color="#2BD46B" stop-opacity="0.21"/>` +
+              `<stop offset="52%" stop-color="#2BD46B" stop-opacity="0.05"/>` +
+              `<stop offset="100%" stop-color="#2BD46B" stop-opacity="0"/>` +
+            `</radialGradient>` +
+          `</defs>` +
           `<path class="ring-arc" pathLength="100" d="M${x1.toFixed(2)} ${y1.toFixed(2)}A${rx.toFixed(2)} ${ry.toFixed(2)} 0 1 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" fill="none" stroke="currentColor" stroke-width="${s.toFixed(2)}" stroke-linecap="round"/>` +
-          `<circle class="dot-halo" cx="${dx.toFixed(2)}" cy="${dy.toFixed(2)}" r="${dot.toFixed(2)}" fill="none" stroke="var(--dot)" stroke-width="1.4"/>` +
-          `<circle class="dot-glow" cx="${dx.toFixed(2)}" cy="${dy.toFixed(2)}" r="${(dot * 2.1).toFixed(2)}" fill="var(--dot)"/>` +
-          `<circle class="dot-trail" cx="${dx.toFixed(2)}" cy="${dy.toFixed(2)}" r="${(dot * 0.68).toFixed(2)}" fill="var(--dot)" opacity="0"/>` +
+          `<circle class="dot-bloom" cx="${dx.toFixed(2)}" cy="${dy.toFixed(2)}" r="${(dot * 5.2).toFixed(2)}" fill="url(#led-bloom)"/>` +
           `<circle class="dot-core" cx="${dx.toFixed(2)}" cy="${dy.toFixed(2)}" r="${dot.toFixed(2)}" fill="var(--dot)"/>` +
         `</svg>`;
 
       const el = document.querySelector("[data-mk]");
       el.innerHTML = letters + svg;
-      return { el, dx, dy, dot };
+      return el;
+    }
+
+    // Relógio 24h discreto (reforça "sempre ligado")
+    const clockEl = document.getElementById("clock");
+    function updateClock() {
+      const now = new Date();
+      clockEl.textContent =
+        `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+
+    // Canvas: Mapa Urbano Abstrato
+    const canvas = document.getElementById("map");
+    const ctx = canvas.getContext("2d");
+
+    let W = 0, H = 0, DPR = 1;
+    let nodes = [];
+    let streets = []; // { a, b, avenue, len }
+    let adj = [];
+    let waypoints = [];
+    let route = []; // lista de segmentos com distâncias acumuladas
+    let routeTotalLen = 0;
+    let timers = [];
+    let rafId = 0;
+
+    const pointer = { x: -9999, y: -9999, tx: -9999, ty: -9999, active: false };
+
+    const state = {
+      phase: "idle", // idle | mapFade | streetRun | leap | settled
+      phaseStart: 0,
+      targetX: 0,
+      targetY: 0,
+      targetR: 6,
+      leapFrom: { x: 0, y: 0 },
+      trail: [],
+      beacons: [],
+      microRuns: [],
+      nextMicroAt: 0
+    };
+
+    function seeded(seed) {
+      let s = seed % 2147483647;
+      if (s <= 0) s += 2147483646;
+      return () => {
+        s = (s * 16807) % 2147483647;
+        return (s - 1) / 2147483646;
+      };
     }
 
     function cubic(p0, p1, p2, p3, t) {
@@ -349,80 +445,664 @@
       return 1 - Math.pow(1 - t, 3);
     }
 
-    function runSequence() {
-      if (started) return;
-      started = true;
+    function easeInOutCubic(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
 
-      const m = measure();
-      const { el, dx, dy, dot } = buildWordmark(m);
-      const core = el.querySelector(".dot-core");
-      const trail = el.querySelector(".dot-trail");
+    function clamp01(v) {
+      return v < 0 ? 0 : v > 1 ? 1 : v;
+    }
+
+    function readTarget() {
+      const core = document.querySelector("[data-mk] .dot-core");
+      if (!core) return;
+      const rect = core.getBoundingClientRect();
+      state.targetX = rect.left + rect.width / 2;
+      state.targetY = rect.top + rect.height / 2;
+      state.targetR = Math.max(3, rect.width / 2);
+    }
+
+    function buildCityMap() {
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = Math.round(W * DPR);
+      canvas.height = Math.round(H * DPR);
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+      const rand = seeded(8419);
+      const scale = W < 640 ? 0.72 : 1;
+
+      // Gera ruas verticais e horizontais com espaçamento irregular de quarteirões reais
+      const xs = [];
+      let x = -40;
+      while (x < W + 90) {
+        xs.push(x);
+        x += (44 + rand() * 76) * scale;
+      }
+
+      const ys = [];
+      let y = -40;
+      while (y < H + 90) {
+        ys.push(y);
+        y += (40 + rand() * 68) * scale;
+      }
+
+      const cols = xs.length;
+      const rows = ys.length;
+
+      // Escolhe algumas avenidas principais contínuas
+      const mainCols = new Set();
+      const mainRows = new Set();
+      mainCols.add(Math.max(1, Math.floor(cols * 0.25)));
+      mainCols.add(Math.max(2, Math.floor(cols * 0.72)));
+      mainRows.add(Math.max(1, Math.floor(rows * 0.3)));
+      mainRows.add(Math.max(2, Math.floor(rows * 0.72)));
+
+      // Leve inclinação natural do traçado urbano (não fica rígido como planilha)
+      const tiltX = (rand() - 0.5) * 0.055;
+      const tiltY = (rand() - 0.5) * 0.045;
+
+      nodes = [];
+      streets = [];
+      adj = [];
+
+      const grid = Array.from({ length: rows }, () => Array(cols).fill(-1));
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const isMain = mainCols.has(c) || mainRows.has(r);
+          const jitter = isMain ? 3 : 7.5 * scale;
+          const nx = xs[c] + (ys[r] - H * 0.5) * tiltX + (rand() - 0.5) * jitter;
+          const ny = ys[r] + (xs[c] - W * 0.5) * tiltY + (rand() - 0.5) * jitter;
+
+          const idx = nodes.length;
+          nodes.push({
+            x: nx,
+            y: ny,
+            r,
+            c,
+            main: isMain,
+            lit: 0
+          });
+          adj.push([]);
+          grid[r][c] = idx;
+        }
+      }
+
+      function addStreet(a, b, avenue) {
+        const len = Math.hypot(nodes[a].x - nodes[b].x, nodes[a].y - nodes[b].y);
+        const id = streets.length;
+        streets.push({ a, b, avenue, len, lit: 0 });
+        adj[a].push({ to: b, id, len });
+        adj[b].push({ to: a, id, len });
+      }
+
+      // Conecta quarteirões, pulando algumas ruas secundárias para parecer cidade real
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const a = grid[r][c];
+          if (c + 1 < cols) {
+            const b = grid[r][c + 1];
+            const ave = mainRows.has(r);
+            if (ave || rand() > 0.22) {
+              addStreet(a, b, ave);
+            }
+          }
+          if (r + 1 < rows) {
+            const b = grid[r + 1][c];
+            const ave = mainCols.has(c);
+            if (ave || rand() > 0.22) {
+              addStreet(a, b, ave);
+            }
+          }
+        }
+      }
+
+      // Adiciona uma avenida diagonal sutil atravessando a parte inferior/esquerda -> superior/direita
+      const diagStartR = Math.max(1, Math.floor(rows * 0.72));
+      let dr = diagStartR;
+      let dc = 1;
+      while (dr - 1 >= 1 && dc + 1 < cols - 1) {
+        const a = grid[dr][dc];
+        const b = grid[dr - 1][dc + 1];
+        addStreet(a, b, true);
+        dr -= 1;
+        dc += 1;
+      }
+
+      readTarget();
+
+      // Escolhe 4 pontos visíveis em bairros distintos ao redor do centro (garantindo que todos têm rota conectada)
+      function pickClosestNode(tx, ty, allowedSet) {
+        let best = 0;
+        let bestD = Infinity;
+        for (let i = 0; i < nodes.length; i++) {
+          if (allowedSet && !allowedSet.has(i)) continue;
+          const n = nodes[i];
+          if (n.x < 42 || n.x > W - 42 || n.y < 42 || n.y > H - 64) continue;
+          if (adj[i].length < 2) continue;
+          const d = Math.hypot(n.x - tx, n.y - ty);
+          if (d < bestD) {
+            bestD = d;
+            best = i;
+          }
+        }
+        return best;
+      }
+
+      const p0 = pickClosestNode(W * 0.16, H * 0.28, null);
+      const reachable = new Set([p0]);
+      const queue = [p0];
+      for (let q = 0; q < queue.length; q++) {
+        for (const e of adj[queue[q]]) {
+          if (!reachable.has(e.to)) {
+            reachable.add(e.to);
+            queue.push(e.to);
+          }
+        }
+      }
+
+      const p1 = pickClosestNode(W * 0.24, H * 0.76, reachable);
+      const p2 = pickClosestNode(W * 0.74, H * 0.73, reachable);
+      const p3 = pickClosestNode(W * 0.80, H * 0.26, reachable);
+      waypoints = [p0, p1, p2, p3];
+
+      // Calcula rota real pelas ruas (Dijkstra simples entre os 4 pontos)
+      function shortestPath(start, goal) {
+        const dist = new Float64Array(nodes.length).fill(Infinity);
+        const prevNode = new Int32Array(nodes.length).fill(-1);
+        const prevEdge = new Int32Array(nodes.length).fill(-1);
+        const used = new Uint8Array(nodes.length);
+        dist[start] = 0;
+
+        for (let step = 0; step < nodes.length; step++) {
+          let u = -1;
+          let best = Infinity;
+          for (let i = 0; i < nodes.length; i++) {
+            if (!used[i] && dist[i] < best) {
+              best = dist[i];
+              u = i;
+            }
+          }
+          if (u === -1 || u === goal) break;
+          used[u] = 1;
+
+          for (const edge of adj[u]) {
+            const weight = edge.len * (streets[edge.id].avenue ? 0.85 : 1.0);
+            const nd = dist[u] + weight;
+            if (nd < dist[edge.to]) {
+              dist[edge.to] = nd;
+              prevNode[edge.to] = u;
+              prevEdge[edge.to] = edge.id;
+            }
+          }
+        }
+
+        const segs = [];
+        let cur = goal;
+        while (cur !== start && prevNode[cur] !== -1) {
+          const from = prevNode[cur];
+          const edgeId = prevEdge[cur];
+          segs.push({ from, to: cur, edgeId, len: Math.hypot(nodes[from].x - nodes[cur].x, nodes[from].y - nodes[cur].y) });
+          cur = from;
+        }
+        segs.reverse();
+        return segs;
+      }
+
+      route = [];
+      routeTotalLen = 0;
+      const wpTriggerDist = [0];
+
+      for (let w = 0; w < waypoints.length - 1; w++) {
+        const segs = shortestPath(waypoints[w], waypoints[w + 1]);
+        for (const seg of segs) {
+          seg.startDist = routeTotalLen;
+          routeTotalLen += seg.len;
+          seg.endDist = routeTotalLen;
+          route.push(seg);
+        }
+        wpTriggerDist.push(routeTotalLen);
+      }
+
+      state.beacons = waypoints.map((nodeIdx, idx) => ({
+        nodeIdx,
+        x: nodes[nodeIdx].x,
+        y: nodes[nodeIdx].y,
+        appearAt: idx * 210,
+        triggerDist: wpTriggerDist[idx] || 0,
+        answered: false,
+        answeredAt: 0
+      }));
+
+      state.leapFrom = { x: nodes[p3].x, y: nodes[p3].y };
+    }
+
+    function drawSoftGlow(x, y, radius, alpha) {
+      const grad = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      grad.addColorStop(0, `rgba(43, 212, 107, ${(alpha * 0.54).toFixed(3)})`);
+      grad.addColorStop(0.24, `rgba(43, 212, 107, ${(alpha * 0.21).toFixed(3)})`);
+      grad.addColorStop(0.55, `rgba(43, 212, 107, ${(alpha * 0.05).toFixed(3)})`);
+      grad.addColorStop(1, "rgba(43, 212, 107, 0)");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function edgeMaskFade(x, y) {
+      // Esmaece o mapa suavemente nas extremidades da tela
+      const dx = Math.abs(x - W * 0.5) / (W * 0.52);
+      const dy = Math.abs(y - H * 0.5) / (H * 0.52);
+      const edge = Math.max(dx, dy);
+      return clamp01(1 - Math.max(0, edge - 0.65) / 0.42);
+    }
+
+    function sampleRouteAt(dist) {
+      if (route.length === 0) return { x: state.leapFrom.x, y: state.leapFrom.y, segIdx: -1 };
+      if (dist <= 0) {
+        const s = route[0];
+        return { x: nodes[s.from].x, y: nodes[s.from].y, segIdx: 0 };
+      }
+      for (let i = 0; i < route.length; i++) {
+        const s = route[i];
+        if (dist <= s.endDist) {
+          const t = s.len > 0 ? (dist - s.startDist) / s.len : 1;
+          return {
+            x: nodes[s.from].x + (nodes[s.to].x - nodes[s.from].x) * t,
+            y: nodes[s.from].y + (nodes[s.to].y - nodes[s.from].y) * t,
+            segIdx: i,
+            segT: t
+          };
+        }
+      }
+      const last = route[route.length - 1];
+      return { x: nodes[last.to].x, y: nodes[last.to].y, segIdx: route.length - 1, segT: 1 };
+    }
+
+    function spawnMicroDispatch(now) {
+      if (nodes.length === 0) return;
+      // Escolhe um nó fora da região central do logo
+      let start = -1;
+      for (let tries = 0; tries < 25; tries++) {
+        const idx = Math.floor(Math.random() * nodes.length);
+        const n = nodes[idx];
+        if (n.x < 60 || n.x > W - 60 || n.y < 60 || n.y > H - 70) continue;
+        if (Math.abs(n.x - W * 0.5) < Math.min(W * 0.3, 290) && Math.abs(n.y - H * 0.47) < 120) continue;
+        if (adj[idx].length >= 2) {
+          start = idx;
+          break;
+        }
+      }
+      if (start < 0) return;
+
+      // Caminha 2 a 3 quarteirões aleatórios
+      const hops = 2 + Math.floor(Math.random() * 2);
+      const pathSegs = [];
+      let cur = start;
+      let prev = -1;
+      let total = 0;
+      for (let h = 0; h < hops; h++) {
+        const choices = adj[cur].filter(e => e.to !== prev);
+        if (choices.length === 0) break;
+        const pick = choices[Math.floor(Math.random() * choices.length)];
+        pathSegs.push({ from: cur, to: pick.to, len: pick.len, startDist: total, endDist: total + pick.len });
+        total += pick.len;
+        prev = cur;
+        cur = pick.to;
+      }
+      if (pathSegs.length === 0) return;
+
+      state.microRuns.push({
+        segs: pathSegs,
+        total,
+        start: now,
+        duration: 1100 + pathSegs.length * 240,
+        targetX: nodes[cur].x,
+        targetY: nodes[cur].y
+      });
+    }
+
+    function renderFrame(now) {
+      ctx.clearRect(0, 0, W, H);
+
+      if (pointer.active) {
+        pointer.x += (pointer.tx - pointer.x) * 0.16;
+        pointer.y += (pointer.ty - pointer.y) * 0.16;
+      }
+
+      // Opacidade do mapa (um pouco mais presente na abertura, mais calmo depois que o logo assenta)
+      let mapVis = 1;
+      if (state.phase === "mapFade") {
+        mapVis = clamp01((now - state.phaseStart) / 360);
+      } else if (state.phase === "settled") {
+        mapVis = 0.72;
+      }
+
+      // Avança estado do ponto viajante
+      let traveler = null;
+      let activeDist = -1;
+
+      if (state.phase === "mapFade") {
+        if (now - state.phaseStart >= 360) {
+          state.phase = "streetRun";
+          state.phaseStart = now;
+        }
+      }
+
+      if (state.phase === "streetRun") {
+        const runMs = 1950;
+        const raw = clamp01((now - state.phaseStart) / runMs);
+        const e = easeInOutCubic(raw);
+        activeDist = e * routeTotalLen;
+
+        const pos = sampleRouteAt(activeDist);
+        traveler = { x: pos.x, y: pos.y, r: Math.max(4.5, state.targetR * 0.82), onMap: true };
+
+        state.trail.push({ x: pos.x, y: pos.y });
+        if (state.trail.length > 34) state.trail.shift();
+
+        for (const b of state.beacons) {
+          if (!b.answered && activeDist >= b.triggerDist - 8) {
+            b.answered = true;
+            b.answeredAt = now;
+          }
+        }
+
+        if (raw >= 1) {
+          state.phase = "leap";
+          state.phaseStart = now;
+        }
+      } else if (state.phase === "leap") {
+        const leapMs = 760;
+        const raw = clamp01((now - state.phaseStart) / leapMs);
+        const e = easeOutCubic(raw);
+
+        const p0x = state.leapFrom.x;
+        const p0y = state.leapFrom.y;
+        const p1x = p0x + (state.targetX - p0x) * 0.35;
+        const p1y = Math.min(p0y, state.targetY) - 85;
+        const p2x = state.targetX + (p0x - state.targetX) * 0.18;
+        const p2y = state.targetY - 65;
+
+        const tx = cubic(p0x, p1x, p2x, state.targetX, e);
+        const ty = cubic(p0y, p1y, p2y, state.targetY, e);
+        const rNow = Math.max(4.5, state.targetR * 0.82) + (state.targetR - Math.max(4.5, state.targetR * 0.82)) * e;
+
+        traveler = { x: tx, y: ty, r: rNow, onMap: false };
+        state.trail.push({ x: tx, y: ty });
+        if (state.trail.length > 26) state.trail.shift();
+
+        if (raw >= 1) {
+          finishArrival(now);
+        }
+      }
+
+      // Desenha ruas da cidade
+      ctx.lineCap = "round";
+      for (const s of streets) {
+        const a = nodes[s.a];
+        const b = nodes[s.b];
+        const mx = (a.x + b.x) * 0.5;
+        const my = (a.y + b.y) * 0.5;
+        const fade = edgeMaskFade(mx, my);
+        if (fade <= 0.02) continue;
+
+        let alpha = (s.avenue ? 0.095 : 0.045) * mapVis * fade;
+        let green = 0;
+
+        if (state.phase === "settled" && pointer.active) {
+          const dp = Math.hypot(mx - pointer.x, my - pointer.y);
+          if (dp < 155) {
+            green = (1 - dp / 155) * 0.24;
+          }
+        }
+
+        ctx.lineWidth = s.avenue ? 1.35 : 0.85;
+        if (green > 0.01) {
+          ctx.strokeStyle = `rgba(43, 212, 107, ${(alpha + green).toFixed(3)})`;
+        } else {
+          ctx.strokeStyle = `rgba(215, 224, 227, ${alpha.toFixed(3)})`;
+        }
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+
+      // Desenha a rota iluminada já percorrida pelas ruas
+      if (state.phase === "streetRun" || state.phase === "leap" || state.phase === "settled") {
+        const routeFade = state.phase === "settled"
+          ? Math.max(0, 1 - (now - state.phaseStart) / 2600)
+          : 1;
+
+        if (routeFade > 0.01) {
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          for (const seg of route) {
+            const limit = state.phase === "streetRun" ? activeDist : routeTotalLen;
+            if (limit <= seg.startDist) break;
+
+            const frac = limit >= seg.endDist ? 1 : (limit - seg.startDist) / seg.len;
+            const ax = nodes[seg.from].x;
+            const ay = nodes[seg.from].y;
+            const bx = ax + (nodes[seg.to].x - ax) * frac;
+            const by = ay + (nodes[seg.to].y - ay) * frac;
+
+            ctx.strokeStyle = `rgba(43, 212, 107, ${(0.36 * routeFade).toFixed(3)})`;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(ax, ay);
+            ctx.lineTo(bx, by);
+            ctx.stroke();
+          }
+        }
+      }
+
+      // Desenha os 4 sinais urbanos (chamados na cidade -> respondidos em verde)
+      const beaconOverallFade = state.phase === "settled"
+        ? Math.max(0, 1 - (now - state.phaseStart) / 2800)
+        : 1;
+
+      if (beaconOverallFade > 0.01) {
+        const elapsedSinceStart = state.phase === "mapFade" ? now - state.phaseStart : 9999;
+        for (const b of state.beacons) {
+          if (state.phase === "mapFade" && elapsedSinceStart < b.appearAt) continue;
+
+          if (!b.answered) {
+            const pulse = 0.55 + 0.45 * Math.sin(now * 0.008 + b.x);
+            // Ponto aguardando resposta (branco suave)
+            ctx.fillStyle = `rgba(255, 255, 255, ${(0.72 * beaconOverallFade).toFixed(3)})`;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, 3.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = `rgba(255, 255, 255, ${(0.28 * pulse * beaconOverallFade).toFixed(3)})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, 5 + pulse * 5.5, 0, Math.PI * 2);
+            ctx.stroke();
+          } else {
+            const age = (now - b.answeredAt) / 900;
+            const fade = Math.max(0.25, 1 - age * 0.45) * beaconOverallFade;
+            drawSoftGlow(b.x, b.y, 20, fade * 0.7);
+            ctx.fillStyle = `rgba(43, 212, 107, ${(0.95 * beaconOverallFade).toFixed(3)})`;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, 3.4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // Micro-despachos ocasionais na cidade depois que tudo assentou ("sempre ligado")
+      if (state.phase === "settled" && !reducedMotion && now >= state.nextMicroAt) {
+        spawnMicroDispatch(now);
+        state.nextMicroAt = now + 2400 + Math.random() * 2400;
+      }
+
+      state.microRuns = state.microRuns.filter(run => {
+        const p = (now - run.start) / run.duration;
+        if (p >= 1) return false;
+
+        const env = p < 0.15 ? p / 0.15 : p > 0.78 ? (1 - p) / 0.22 : 1;
+        const dist = easeInOutCubic(p) * run.total;
+
+        // Trilha verde curta
+        for (const seg of run.segs) {
+          if (dist <= seg.startDist) break;
+          const f = dist >= seg.endDist ? 1 : (dist - seg.startDist) / seg.len;
+          const ax = nodes[seg.from].x;
+          const ay = nodes[seg.from].y;
+          const bx = ax + (nodes[seg.to].x - ax) * f;
+          const by = ay + (nodes[seg.to].y - ay) * f;
+          ctx.strokeStyle = `rgba(43, 212, 107, ${(0.28 * env).toFixed(3)})`;
+          ctx.lineWidth = 1.6;
+          ctx.beginPath();
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(bx, by);
+          ctx.stroke();
+        }
+
+        // Cabeça do pulso correndo na rua
+        for (const seg of run.segs) {
+          if (dist <= seg.endDist) {
+            const f = seg.len > 0 ? (dist - seg.startDist) / seg.len : 1;
+            const hx = nodes[seg.from].x + (nodes[seg.to].x - nodes[seg.from].x) * f;
+            const hy = nodes[seg.from].y + (nodes[seg.to].y - nodes[seg.from].y) * f;
+            drawSoftGlow(hx, hy, 14, env * 0.75);
+            ctx.fillStyle = `rgba(43, 212, 107, ${(0.9 * env).toFixed(3)})`;
+            ctx.beginPath();
+            ctx.arc(hx, hy, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+            break;
+          }
+        }
+
+        // Ponto de destino aguardando
+        ctx.fillStyle = `rgba(255, 255, 255, ${(0.45 * env).toFixed(3)})`;
+        ctx.beginPath();
+        ctx.arc(run.targetX, run.targetY, 2.1, 0, Math.PI * 2);
+        ctx.fill();
+
+        return true;
+      });
+
+      // Ponto verde principal viajando pela cidade e subindo para o "O"
+      if (traveler) {
+        if (state.trail.length > 2) {
+          for (let i = 1; i < state.trail.length; i++) {
+            const frac = i / state.trail.length;
+            const prev = state.trail[i - 1];
+            const curr = state.trail[i];
+            ctx.strokeStyle = `rgba(43, 212, 107, ${(frac * frac * 0.32).toFixed(3)})`;
+            ctx.lineWidth = Math.max(1, traveler.r * 1.15 * frac);
+            ctx.beginPath();
+            ctx.moveTo(prev.x, prev.y);
+            ctx.lineTo(curr.x, curr.y);
+            ctx.stroke();
+          }
+        }
+
+        drawSoftGlow(traveler.x, traveler.y, traveler.r * 5.2, 1);
+        ctx.fillStyle = "#2BD46B";
+        ctx.beginPath();
+        ctx.arc(traveler.x, traveler.y, traveler.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      rafId = requestAnimationFrame(renderFrame);
+    }
+
+    function clearTimers() {
+      timers.forEach(clearTimeout);
+      timers = [];
+    }
+
+    function finishArrival(now) {
+      state.phase = "settled";
+      state.phaseStart = now;
+      state.trail = [];
+      state.nextMicroAt = now + 2200;
+
+      document.body.classList.add("dot-landed");
+      timers.push(setTimeout(() => document.body.classList.add("ring-in"), 30));
+      timers.push(setTimeout(() => document.body.classList.add("word-in"), 300));
+      timers.push(setTimeout(() => document.body.classList.add("settled"), 880));
+    }
+
+    function startExperience(isReplay) {
+      clearTimers();
+      document.body.classList.add("resetting");
+      document.body.classList.remove("dot-landed", "ring-in", "word-in", "settled");
+      void document.body.offsetWidth;
+      document.body.classList.remove("resetting");
+
+      if (!isReplay) {
+        const m = measure();
+        buildWordmark(m);
+      }
 
       document.body.classList.add("ready");
+      buildCityMap();
 
       if (reducedMotion) {
-        document.body.classList.add("landed", "ring-in", "word-in", "settled");
+        state.phase = "settled";
+        state.phaseStart = performance.now() - 5000;
+        document.body.classList.add("dot-landed", "ring-in", "word-in", "settled");
+        if (!rafId) rafId = requestAnimationFrame(renderFrame);
         return;
       }
 
-      // Curva suave do ponto verde viajando da esquerda para a posição final no "o"
-      const x0 = dx - 250, y0 = dy + 58;
-      const x1 = dx - 165, y1 = dy + 96;
-      const x2 = dx - 54,  y2 = dy - 56;
-      const travelMs = 880;
-      const t0 = performance.now();
-      let ringTriggered = false;
+      state.phase = "mapFade";
+      state.phaseStart = performance.now();
+      state.trail = [];
+      state.microRuns = [];
 
-      core.setAttribute("cx", x0.toFixed(2));
-      core.setAttribute("cy", y0.toFixed(2));
-      core.setAttribute("r", "0");
-
-      function tick(now) {
-        const raw = Math.min(1, (now - t0) / travelMs);
-        const e = easeOutCubic(raw);
-
-        const cxNow = cubic(x0, x1, x2, dx, e);
-        const cyNow = cubic(y0, y1, y2, dy, e);
-        const rScale = raw < 0.14 ? raw / 0.14 : 1;
-
-        core.setAttribute("cx", cxNow.toFixed(2));
-        core.setAttribute("cy", cyNow.toFixed(2));
-        core.setAttribute("r", (dot * rScale).toFixed(2));
-
-        // Rastro sutil acompanhando o movimento durante o voo
-        const eTrail = easeOutCubic(Math.max(0, raw - 0.06));
-        trail.setAttribute("cx", cubic(x0, x1, x2, dx, eTrail).toFixed(2));
-        trail.setAttribute("cy", cubic(y0, y1, y2, dy, eTrail).toFixed(2));
-        trail.setAttribute("opacity", (Math.sin(Math.PI * raw) * 0.3).toFixed(3));
-
-        // O anel do "O" começa a se formar no momento da chegada do ponto
-        if (!ringTriggered && raw >= 0.78) {
-          ringTriggered = true;
-          document.body.classList.add("landed", "ring-in");
-          setTimeout(() => document.body.classList.add("word-in"), 250);
-          setTimeout(() => document.body.classList.add("settled"), 800);
-        }
-
-        if (raw < 1) {
-          requestAnimationFrame(tick);
-        } else {
-          core.setAttribute("cx", dx.toFixed(2));
-          core.setAttribute("cy", dy.toFixed(2));
-          core.setAttribute("r", dot.toFixed(2));
-          trail.setAttribute("opacity", "0");
-        }
+      if (!rafId) {
+        rafId = requestAnimationFrame(renderFrame);
       }
-
-      requestAnimationFrame(tick);
     }
 
-    const safety = setTimeout(runSequence, 850);
+    window.addEventListener("pointermove", e => {
+      pointer.tx = e.clientX;
+      pointer.ty = e.clientY;
+      if (!pointer.active) {
+        pointer.x = e.clientX;
+        pointer.y = e.clientY;
+      }
+      pointer.active = true;
+    }, { passive: true });
+
+    window.addEventListener("pointerleave", () => {
+      pointer.active = false;
+    });
+
+    window.addEventListener("resize", () => {
+      if (state.phase === "idle") return;
+      buildCityMap();
+    });
+
+    document.querySelector("[data-mk]").addEventListener("click", () => {
+      if (state.phase === "settled") {
+        startExperience(true);
+      }
+    });
+
+    let booted = false;
+    function boot() {
+      if (booted) return;
+      booted = true;
+      startExperience(false);
+    }
+
+    const safety = setTimeout(boot, 850);
     document.fonts.load(`${WGT} ${SIZE}px "${FONT}"`, "nunzo")
       .catch(() => {})
       .then(() => document.fonts.ready)
       .then(() => {
         clearTimeout(safety);
-        runSequence();
+        boot();
       });
   </script>
 </body>
