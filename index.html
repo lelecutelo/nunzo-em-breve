@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>nunzo — Em breve</title>
+  <meta name="description" content="Ninguém fica sem resposta.">
+  <meta name="theme-color" content="#15191C">
+  <meta property="og:title" content="nunzo — Em breve">
+  <meta property="og:description" content="Ninguém fica sem resposta.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://nunzo.com.br">
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500&display=swap">
+  <style>
+    :root {
+      --ink: #15191C;
+      --ink-hi: #1A2024;
+      --dot: #2BD46B;
+      --soft: #A3ABAE;
+      --muted: #6C767C;
+      --paper: #FFFFFF;
+      --line: rgba(255, 255, 255, 0.1);
+      --font: "Outfit", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 44%, var(--ink-hi) 0%, var(--ink) 68%);
+      background-color: var(--ink);
+      color: var(--paper);
+      font-family: var(--font);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      min-height: 100dvh;
+      padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+    }
+
+    main {
+      display: grid;
+      place-items: center;
+      text-align: center;
+    }
+
+    .stack {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--soft);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+    }
+
+    .led {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--dot);
+      box-shadow: 0 0 0 3px rgba(43, 212, 107, 0.22);
+      animation: led-pulse 3.2s ease-in-out infinite;
+    }
+
+    .mk {
+      margin: 0;
+      font-family: var(--font);
+      font-weight: 500;
+      font-size: clamp(64px, 15vw, 144px);
+      letter-spacing: -0.025em;
+      line-height: 1;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: baseline;
+      color: var(--paper);
+      user-select: none;
+    }
+
+    .mk svg {
+      display: inline-block;
+      overflow: visible;
+    }
+
+    .mk circle {
+      animation: dot-breathe 3.2s ease-in-out infinite;
+    }
+
+    .tagline {
+      margin: 2px 0 0;
+      color: var(--soft);
+      font-size: clamp(17px, 2.5vw, 22px);
+      font-weight: 400;
+      letter-spacing: -0.005em;
+    }
+
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.02em;
+      padding-top: 16px;
+    }
+
+    @keyframes led-pulse {
+      0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 0 3px rgba(43, 212, 107, 0.22);
+      }
+      50% {
+        opacity: 0.65;
+        box-shadow: 0 0 0 6px rgba(43, 212, 107, 0.08);
+      }
+    }
+
+    @keyframes dot-breathe {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.72;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .led,
+      .mk circle {
+        animation: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="stack">
+      <div class="badge">
+        <span class="led" aria-hidden="true"></span>
+        <span>Em breve</span>
+      </div>
+      <h1 class="mk" data-mk aria-label="nunzo">nunz<svg viewBox="0 0 56 56" style="width:0.56em;height:0.56em;vertical-align:-0.012em;margin-left:0.04em;margin-right:0.03em" aria-hidden="true"><path d="M50.56 31.49A22.75 22.75 0 1 1 24.83 5.44" fill="none" stroke="currentColor" stroke-width="9.5" stroke-linecap="round"/><circle cx="44.09" cy="11.91" r="3.8" fill="var(--dot)"/></svg></h1>
+      <p class="tagline">Ninguém fica sem resposta.</p>
+    </div>
+  </main>
+
+  <footer>nunzo.com.br</footer>
+
+  <script>
+    const FONT = "Outfit", WGT = 500, SIZE = 200, BASE = 220;
+    const cv = document.createElement("canvas");
+    cv.width = 520;
+    cv.height = 320;
+    const cx = cv.getContext("2d", { willReadFrequently: true });
+
+    function measure() {
+      cx.clearRect(0, 0, cv.width, cv.height);
+      cx.font = `${WGT} ${SIZE}px "${FONT}"`;
+      cx.fillText("o", 60, BASE);
+      const adv = cx.measureText("o").width;
+      const d = cx.getImageData(0, 0, cv.width, cv.height).data;
+      const W = cv.width, H = cv.height;
+      let l = W, r = 0, t = H, b = 0;
+      for (let y = 0; y < H; y++) {
+        for (let x = 0; x < W; x++) {
+          if (d[(y * W + x) * 4 + 3] > 128) {
+            if (x < l) l = x;
+            if (x > r) r = x;
+            if (y < t) t = y;
+            if (y > b) b = y;
+          }
+        }
+      }
+      const my = Math.round((t + b) / 2);
+      let s = 0, x = l;
+      while (x <= r && d[(my * W + x) * 4 + 3] > 128) {
+        s++;
+        x++;
+      }
+      return {
+        w: (r - l + 1) / SIZE,
+        h: (b - t + 1) / SIZE,
+        below: (b + 1 - BASE) / SIZE,
+        sh: s / SIZE,
+        lsb: (l - 60) / SIZE,
+        rsb: (adv - (r + 1 - 60)) / SIZE
+      };
+    }
+
+    function ring(m) {
+      const W = m.w * 100, H = m.h * 100;
+      const s = Math.min(m.sh * 100 * 0.94, W * 0.3);
+      const rx = W / 2 - s / 2, ry = H / 2 - s / 2;
+      const cX = W / 2, cY = H / 2;
+      const p = a => [cX + rx * Math.cos(a * Math.PI / 180), cY + ry * Math.sin(a * Math.PI / 180)];
+      const [x1, y1] = p(8), [x2, y2] = p(-98), [dx, dy] = p(-45), dot = s * 0.4;
+      const st = `width:${m.w}em;height:${m.h}em;vertical-align:${(-m.below).toFixed(4)}em;margin-left:${m.lsb.toFixed(4)}em;margin-right:${m.rsb.toFixed(4)}em`;
+      return `<svg viewBox="0 0 ${W.toFixed(2)} ${H.toFixed(2)}" style="${st}" aria-hidden="true"><path d="M${x1.toFixed(2)} ${y1.toFixed(2)}A${rx.toFixed(2)} ${ry.toFixed(2)} 0 1 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" fill="none" stroke="currentColor" stroke-width="${s.toFixed(2)}" stroke-linecap="round"/><circle cx="${dx.toFixed(2)}" cy="${dy.toFixed(2)}" r="${dot.toFixed(2)}" fill="var(--dot)"/></svg>`;
+    }
+
+    function paint() {
+      const m = measure();
+      if (!m || !isFinite(m.w) || m.w <= 0) return;
+      document.querySelectorAll("[data-mk]").forEach(e => {
+        e.innerHTML = `nunz${ring(m)}`;
+      });
+    }
+
+    document.fonts.load(`${WGT} ${SIZE}px "${FONT}"`, "o")
+      .catch(() => {})
+      .then(() => document.fonts.ready)
+      .then(paint);
+  </script>
+</body>
+</html>
