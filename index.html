@@ -62,66 +62,6 @@
       pointer-events: none;
     }
 
-    .controls {
-      position: fixed;
-      top: max(20px, env(safe-area-inset-top));
-      right: max(20px, env(safe-area-inset-right));
-      z-index: 4;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      opacity: 0;
-      pointer-events: none;
-      transform: translateY(-4px);
-      transition: opacity 0.6s ease 0.25s, transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.25s;
-    }
-
-    body.settled .controls {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateY(0);
-    }
-
-    .ctrl-btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      height: 32px;
-      padding: 0 11px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(20, 24, 27, 0.72);
-      backdrop-filter: blur(8px);
-      color: var(--soft);
-      font: 500 11.5px var(--font);
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
-    }
-
-    .ctrl-btn:hover {
-      border-color: rgba(255, 255, 255, 0.22);
-      color: var(--paper);
-    }
-
-    .ctrl-btn svg {
-      width: 13px;
-      height: 13px;
-      flex: none;
-    }
-
-    .ctrl-btn[aria-pressed="true"] .sound-dot {
-      background: var(--dot);
-    }
-
-    .sound-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--muted);
-      transition: background 0.2s ease;
-    }
-
     main,
     footer {
       position: relative;
@@ -472,7 +412,6 @@
     body.resetting .mk .ring-arc,
     body.resetting .badge,
     body.resetting footer,
-    body.resetting .controls,
     body.resetting .hint {
       transition: none !important;
     }
@@ -500,14 +439,12 @@
       .ch,
       .mk .ring-arc,
       footer,
-      .controls,
       .hint {
         transition: none !important;
       }
       .stack,
       .badge,
       footer,
-      .controls,
       .ch,
       .mk .dot-core,
       .mk .dot-bloom {
@@ -526,17 +463,6 @@
 </head>
 <body>
   <canvas id="map" aria-hidden="true"></canvas>
-
-  <div class="controls">
-    <button type="button" class="ctrl-btn" id="btn-sound" aria-pressed="false" title="Ligar ou silenciar som">
-      <span class="sound-dot" aria-hidden="true"></span>
-      <span id="sound-label">Som</span>
-    </button>
-    <button type="button" class="ctrl-btn" id="btn-replay" title="Rever abertura">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
-      <span>Rever</span>
-    </button>
-  </div>
 
   <main>
     <div class="stack">
@@ -715,94 +641,6 @@
     }
     updateClock();
     setInterval(updateClock, 1000);
-
-    // Áudio tátil discreto (Web Audio API, sem arquivos externos)
-    let audioCtx = null;
-    let soundEnabled = true;
-    let soundUserMuted = false;
-    let lastSoundAt = 0;
-
-    const btnSound = document.getElementById("btn-sound");
-    const soundLabel = document.getElementById("sound-label");
-
-    function syncSoundUI() {
-      const active = soundEnabled && !soundUserMuted;
-      btnSound.setAttribute("aria-pressed", active ? "true" : "false");
-      soundLabel.textContent = active ? "Som on" : "Som off";
-    }
-    syncSoundUI();
-
-    function ensureAudio() {
-      if (soundUserMuted || !soundEnabled) return null;
-      if (!audioCtx) {
-        const AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return null;
-        audioCtx = new AC();
-      }
-      if (audioCtx.state === "suspended") {
-        audioCtx.resume().catch(() => {});
-      }
-      syncSoundUI();
-      return audioCtx;
-    }
-
-    function playPing() {
-      const ctxA = ensureAudio();
-      if (!ctxA) return;
-      const tNow = performance.now();
-      if (tNow - lastSoundAt < 45) return;
-      lastSoundAt = tNow;
-
-      const t = ctxA.currentTime;
-      const osc = ctxA.createOscillator();
-      const gain = ctxA.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(520, t);
-      osc.frequency.exponentialRampToValueAtTime(680, t + 0.045);
-
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.linearRampToValueAtTime(0.032, t + 0.006);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.065);
-
-      osc.connect(gain);
-      gain.connect(ctxA.destination);
-      osc.start(t);
-      osc.stop(t + 0.07);
-    }
-
-    function playResolve() {
-      const ctxA = ensureAudio();
-      if (!ctxA) return;
-      const t = ctxA.currentTime;
-
-      [783.99, 1174.66].forEach((freq, idx) => {
-        const osc = ctxA.createOscillator();
-        const gain = ctxA.createGain();
-        osc.type = "triangle";
-        const start = t + idx * 0.025;
-        osc.frequency.setValueAtTime(freq, start);
-
-        gain.gain.setValueAtTime(0.0001, start);
-        gain.gain.linearRampToValueAtTime(0.026, start + 0.008);
-        gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.14);
-
-        osc.connect(gain);
-        gain.connect(ctxA.destination);
-        osc.start(start);
-        osc.stop(start + 0.15);
-      });
-    }
-
-    btnSound.addEventListener("click", e => {
-      e.stopPropagation();
-      soundUserMuted = !soundUserMuted;
-      if (!soundUserMuted) {
-        soundEnabled = true;
-        ensureAudio();
-        playPing();
-      }
-      syncSoundUI();
-    });
 
     // Mapa vetorial real em estilo Dark Maps
     const MAP = window.NUNZO_MAP || { w: 2000, h: 1950, v: [], r: [], p: [] };
@@ -1194,8 +1032,6 @@
         document.body.classList.add("interacted");
       }
 
-      playPing();
-
       state.dispatches.push({
         segs,
         total,
@@ -1467,7 +1303,6 @@
             ? d.duration
             : state.avgMs * 0.72 + d.duration * 0.28;
           updateMetricsUI();
-          playResolve();
         }
 
         const enterProg = clamp01(elapsed / 160);
@@ -1734,7 +1569,6 @@
     function openModal() {
       modal.setAttribute("data-open", "true");
       wlStatus.textContent = "";
-      playPing();
       setTimeout(() => wlInput.focus(), 80);
     }
 
@@ -1771,7 +1605,6 @@
           list.push({ contact: val, at: new Date().toISOString() });
           localStorage.setItem("nunzo_waitlist", JSON.stringify(list));
         }
-        playResolve();
         wlInput.value = "";
         wlStatus.textContent = "Anotado. Você será um dos primeiros a saber.";
       } catch {
@@ -1800,14 +1633,9 @@
     window.addEventListener("click", e => {
       if (state.phase !== "settled") return;
       if (modal.getAttribute("data-open") === "true") return;
-      if (e.target.closest(".controls, .mk, footer, .modal")) return;
+      if (e.target.closest(".mk, footer, .modal")) return;
       updatePointer(e);
       spawnUserDispatch(e.clientX, e.clientY);
-    });
-
-    document.getElementById("btn-replay").addEventListener("click", e => {
-      e.stopPropagation();
-      if (state.phase === "settled") startExperience(true);
     });
 
     window.addEventListener("resize", () => {
