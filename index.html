@@ -236,28 +236,9 @@
       opacity: 0.35;
     }
 
-    #clock,
-    #metrics {
+    #clock {
       font-variant-numeric: tabular-nums;
       opacity: 0.82;
-    }
-
-    #metrics {
-      display: none;
-      align-items: center;
-      gap: 8px;
-      color: var(--soft);
-    }
-
-    body.interacted #metrics {
-      display: inline-flex;
-    }
-
-    .m-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: var(--dot);
     }
 
     body.settled .badge,
@@ -477,11 +458,6 @@
     <span>nunzo.com.br</span>
     <span class="sep" aria-hidden="true">·</span>
     <span id="clock" aria-label="Horário atual"></span>
-    <span id="metrics" aria-live="polite">
-      <span class="sep" aria-hidden="true">·</span>
-      <span class="m-dot" aria-hidden="true"></span>
-      <span id="metrics-text"></span>
-    </span>
   </footer>
 
   <div class="modal-backdrop" id="waitlist-modal" data-open="false" role="dialog" aria-modal="true" aria-labelledby="wl-title">
@@ -686,17 +662,8 @@
       leapFrom: { x: 0, y: 0 },
       trail: [],
       beacons: [],
-      dispatches: [],
-      resolvedCount: 0,
-      avgMs: 0
+      dispatches: []
     };
-
-    const metricsText = document.getElementById("metrics-text");
-    function updateMetricsUI() {
-      if (state.resolvedCount === 0) return;
-      const secs = (state.avgMs / 1000).toFixed(1).replace(".", ",");
-      metricsText.textContent = `${state.resolvedCount} · ${secs} s · 100%`;
-    }
 
     function cubic(p0, p1, p2, p3, t) {
       const u = 1 - t;
@@ -1298,11 +1265,6 @@
         if (!d.answered && prog >= 1) {
           d.answered = true;
           d.answeredAt = now;
-          state.resolvedCount += 1;
-          state.avgMs = state.resolvedCount === 1
-            ? d.duration
-            : state.avgMs * 0.72 + d.duration * 0.28;
-          updateMetricsUI();
         }
 
         const enterProg = clamp01(elapsed / 160);
